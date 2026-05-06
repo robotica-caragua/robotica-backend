@@ -9,8 +9,8 @@ app.use(cors())
 app.use(helmet())
 
 app.get('/status', (req: Request, res: Response) => {
-    res.json({
-        status: 'ok',
-        message: 'API  online'
-    })
+  res.json({
+    status: 'ok',
+    message: 'API  online',
+  })
 })
