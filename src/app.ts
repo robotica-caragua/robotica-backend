@@ -1,6 +1,7 @@
 import express, { Request, Response, Express } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
+import userRoutes from './routes/userRoutes'
 
 export const app: Express = express()
 
@@ -14,3 +15,5 @@ app.get('/status', (req: Request, res: Response) => {
     message: 'API  online',
   })
 })
+
+app.use('/users', userRoutes)
