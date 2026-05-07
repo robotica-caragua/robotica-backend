@@ -5,5 +5,8 @@ node_modules
 /src/generated/prisma
 
 pnpm-lock.yaml
+package-lock.json
 
 /dist
+
+.idea
