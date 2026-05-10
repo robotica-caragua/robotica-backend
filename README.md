@@ -78,7 +78,7 @@ O projeto utiliza variáveis de ambiente para configurar a conexão com o banco 
    ```
 
    | Variável            | Descrição                                                           |
-   |---------------------|---------------------------------------------------------------------|
+   | ------------------- | ------------------------------------------------------------------- |
    | `DATABASE_URL`      | URL de conexão completa, usada pelo Prisma para rodar as migrations |
    | `DATABASE_USER`     | Usuário do banco                                                    |
    | `DATABASE_PASSWORD` | Senha do usuário                                                    |
@@ -137,6 +137,53 @@ npx prisma studio
 
 ---
 
+## REST Endpoints
+
+### Usuários
+
+| Método   | Endpoint     | Descrição                     |
+| -------- | ------------ | ----------------------------- |
+| `GET`    | `/users`     | Lista todos os usuários       |
+| `GET`    | `/users/:id` | Retorna um usuário específico |
+| `POST`   | `/users`     | Cria um novo usuário          |
+| `PUT`    | `/users/:id` | Atualiza um usuário           |
+| `DELETE` | `/users/:id` | Deleta um usuário             |
+
+**Exemplo de criação de usuário:**
+
+```json
+POST /users
+{
+  "name": "João Silva",
+  "email": "joao@example.com",
+  "password": "senhaSegura123",
+  "role": "TEACHER",
+  "schoolId": 1
+}
+```
+
+### Escolas
+
+| Método   | Endpoint       | Descrição                     |
+| -------- | -------------- | ----------------------------- |
+| `GET`    | `/schools`     | Lista todas as escolas        |
+| `GET`    | `/schools/:id` | Retorna uma escola específica |
+| `POST`   | `/schools`     | Cria uma nova escola          |
+| `PUT`    | `/schools/:id` | Atualiza uma escola           |
+| `DELETE` | `/schools/:id` | Deleta uma escola             |
+
+**Exemplo de criação de escola:**
+
+```json
+POST /schools
+{
+  "name": "Escola Municipal ABC",
+  "address": "Rua das Flores, 123"
+}
+```
+
+---
+
 ## Rodando o projeto
 
 ### Modo desenvolvimento (com hot reload)
@@ -166,7 +213,7 @@ npm run start
 ## Scripts disponíveis
 
 | Script             | Descrição                                                |
-|--------------------|----------------------------------------------------------|
+| ------------------ | -------------------------------------------------------- |
 | `npm run dev`      | Roda o servidor em modo dev com hot reload (`tsx watch`) |
 | `npm run build`    | Compila o TypeScript para `dist/`                        |
 | `npm run start`    | Roda o servidor a partir do build (`dist/server.js`)     |
@@ -205,7 +252,7 @@ robotica-backend/
 ## Endpoints
 
 | Método | Rota         | Descrição                     |
-|--------|--------------|-------------------------------|
+| ------ | ------------ | ----------------------------- |
 | GET    | `/status`    | Health check da API           |
 | GET    | `/users`     | Lista todos os usuários       |
 | GET    | `/users/:id` | Busca um usuário pelo ID      |
