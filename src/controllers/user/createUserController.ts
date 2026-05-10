@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { createUser } from '../models/userModel'
-import { createUserSchema } from '../schemas/userSchemas'
+import { createUser } from '../../models/userModel'
+import { createUserSchema } from '../../schemas/userSchemas'
 import { getUserErrorResponse, parseBody } from './userControllerUtils'
 
 export async function createUsersController(req: Request, res: Response) {

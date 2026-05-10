@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { getSchools } from '../models/schoolModel'
+import { getSchools } from '../../models/schoolModel'
 import { getSchoolErrorResponse } from './schoolControllerUtils'
 
 export async function getSchoolsController(req: Request, res: Response) {

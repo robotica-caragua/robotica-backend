@@ -1,9 +1,9 @@
 import { Router } from 'express'
-import { createSchoolController } from '../controllers/createSchoolController'
-import { getSchoolsController } from '../controllers/getSchoolsController'
-import { getSchoolByIdController } from '../controllers/getSchoolByIdController'
-import { updateSchoolController } from '../controllers/updateSchoolController'
-import { deleteSchoolController } from '../controllers/deleteSchoolController'
+import { createSchoolController } from '../controllers/school/createSchoolController'
+import { getSchoolsController } from '../controllers/school/getSchoolsController'
+import { getSchoolByIdController } from '../controllers/school/getSchoolByIdController'
+import { updateSchoolController } from '../controllers/school/updateSchoolController'
+import { deleteSchoolController } from '../controllers/school/deleteSchoolController'
 
 const router: Router = Router()
 

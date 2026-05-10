@@ -1,6 +1,6 @@
 import { Request, Response } from 'express'
-import { updateUser } from '../models/userModel'
-import { updateUserSchema } from '../schemas/userSchemas'
+import { updateUser } from '../../models/userModel'
+import { updateUserSchema } from '../../schemas/userSchemas'
 import { getUserErrorResponse, parseBody } from './userControllerUtils'
 
 export async function updateUserController(req: Request, res: Response) {

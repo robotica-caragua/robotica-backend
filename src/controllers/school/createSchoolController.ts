@@ -1,11 +1,10 @@
 import { Request, Response } from 'express'
-import { updateSchool } from '../models/schoolModel'
-import { updateSchoolSchema } from '../schemas/schoolSchemas'
+import { createSchool } from '../../models/schoolModel'
+import { createSchoolSchema } from '../../schemas/schoolSchemas'
 import { getSchoolErrorResponse, parseBody } from './schoolControllerUtils'
 
-export async function updateSchoolController(req: Request, res: Response) {
-  const id = res.locals.schoolId as number
-  const validation = parseBody(updateSchoolSchema, req.body)
+export async function createSchoolController(req: Request, res: Response) {
+  const validation = parseBody(createSchoolSchema, req.body)
 
   if ('error' in validation) {
     return res.status(400).json({
@@ -14,10 +13,10 @@ export async function updateSchoolController(req: Request, res: Response) {
   }
 
   try {
-    const result = await updateSchool(validation.data, id)
+    const result = await createSchool(validation.data)
 
-    return res.status(200).json({
-      message: 'Escola atualizada com sucesso!',
+    return res.status(201).json({
+      message: 'Escola criada com sucesso!',
       school: result,
     })
   } catch (error) {

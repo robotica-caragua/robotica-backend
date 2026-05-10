@@ -1,5 +1,5 @@
 import { Request, Response } from 'express'
-import { deleteSchool } from '../models/schoolModel'
+import { deleteSchool } from '../../models/schoolModel'
 import { getSchoolErrorResponse } from './schoolControllerUtils'
 
 export async function deleteSchoolController(req: Request, res: Response) {

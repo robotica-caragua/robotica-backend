@@ -1,9 +1,9 @@
 import { Router } from 'express'
-import { createUsersController } from '../controllers/createUserController'
-import { getUsersController } from '../controllers/getUsersController'
-import { getUserByIdController } from '../controllers/getUserByIdController'
-import { updateUserController } from '../controllers/updateUserController'
-import { deleteUserController } from '../controllers/deleteUserController'
+import { createUsersController } from '../controllers/user/createUserController'
+import { getUsersController } from '../controllers/user/getUsersController'
+import { getUserByIdController } from '../controllers/user/getUserByIdController'
+import { updateUserController } from '../controllers/user/updateUserController'
+import { deleteUserController } from '../controllers/user/deleteUserController'
 
 const router: Router = Router()
 

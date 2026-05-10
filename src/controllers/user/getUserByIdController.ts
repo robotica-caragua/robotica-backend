@@ -1,15 +1,21 @@
 import { Request, Response } from 'express'
-import { deleteUser } from '../models/userModel'
+import { getUserById } from '../../models/userModel'
 import { getUserErrorResponse } from './userControllerUtils'
 
-export async function deleteUserController(req: Request, res: Response) {
+export async function getUserByIdController(req: Request, res: Response) {
   const id = res.locals.userId as number
 
   try {
-    const result = await deleteUser(id)
+    const result = await getUserById(id)
+
+    if (!result) {
+      return res.status(404).json({
+        message: 'Usuário não encontrado.',
+      })
+    }
 
     return res.status(200).json({
-      message: 'Usuário deletado com sucesso!',
+      message: 'Usuário encontrado com sucesso!',
       user: result,
     })
   } catch (error) {
