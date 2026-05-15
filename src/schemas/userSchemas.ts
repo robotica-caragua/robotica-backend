@@ -1,7 +1,6 @@
 import { z } from 'zod'
 import { UserRole } from '../generated/prisma/enums'
-
-const requiredString = (message: string) => z.string().trim().min(1, message)
+import { requiredString } from './genericUtils'
 
 const roleSchema = z.preprocess(
   (value) => (typeof value === 'string' ? value.trim().toUpperCase() : value),

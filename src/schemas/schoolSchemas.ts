@@ -1,6 +1,5 @@
 import { z } from 'zod'
-
-const requiredString = (message: string) => z.string().trim().min(1, message)
+import { requiredString } from './genericUtils'
 
 export const createSchoolSchema = z.object({
   name: requiredString('O campo name é obrigatório.'),

@@ -13,26 +13,37 @@ enum UserRole {
 }
 
 model User {
-  id        Int      @id @default(autoincrement())
-  name      String
-  email     String   @unique
-  password  String
-  role      UserRole @default(TEACHER)
-  
-  schoolId  Int?
-  school    School?  @relation(fields: [schoolId], references: [id])
-  
+  id       Int      @id @default(autoincrement())
+  name     String
+  email    String   @unique
+  password String
+  role     UserRole @default(TEACHER)
+
+  schoolId Int?
+  school   School? @relation(fields: [schoolId], references: [id])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
 model School {
-  id        Int      @id @default(autoincrement())
-  name      String
-  address   String?
+  id      Int     @id @default(autoincrement())
+  name    String
+  address String?
 
-  users     User[]
+  users User[]
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  projects  Project[]
+}
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  schoolId    Int
+  school      School   @relation(fields: [schoolId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
