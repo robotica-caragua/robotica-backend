@@ -12,6 +12,14 @@ const publicUserSelect = {
   updatedAt: true,
 }
 
+const publicUserSchoolSelect = {
+  id: true,
+  name: true,
+  address: true,
+  createdAt: true,
+  updatedAt: true,
+}
+
 export const createUser = async (user: CreateUserData) => {
   const hashedPassword = await bcrypt.hash(user.password, 10)
 
@@ -42,6 +50,20 @@ export const getUserById = async (id: number) => {
       id,
     },
     select: publicUserSelect,
+  })
+}
+
+export const getUserSchoolById = async (id: number) => {
+  return prisma.user.findUnique({
+    where: {
+      id,
+    },
+    select: {
+      schoolId: true,
+      school: {
+        select: publicUserSchoolSelect,
+      },
+    },
   })
 }
 
