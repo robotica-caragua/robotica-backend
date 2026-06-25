@@ -3,6 +3,8 @@ import cors from 'cors'
 import helmet from 'helmet'
 import userRoutes from './routes/userRoutes'
 import schoolRoutes from './routes/schoolRoutes'
+import tutorialRoutes from './routes/tutorialRoutes'
+import categoryRoutes from './routes/categoryRoutes'
 
 export const app: Express = express()
 
@@ -19,3 +21,5 @@ app.get('/status', (req: Request, res: Response) => {
 
 app.use('/users', userRoutes)
 app.use('/schools', schoolRoutes)
+app.use('/tutorials', tutorialRoutes)
+app.use('/categories', categoryRoutes)
