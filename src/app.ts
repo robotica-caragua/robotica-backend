@@ -3,6 +3,8 @@ import cors from 'cors'
 import helmet from 'helmet'
 import userRoutes from './routes/userRoutes'
 import schoolRoutes from './routes/schoolRoutes'
+import authRoutes from './routes/authRoutes'
+import { authMiddleware } from './middlewares/authMiddleware'
 
 export const app: Express = express()
 
@@ -17,5 +19,6 @@ app.get('/status', (req: Request, res: Response) => {
   })
 })
 
-app.use('/users', userRoutes)
-app.use('/schools', schoolRoutes)
+app.use('/auth', authRoutes)
+app.use('/users', authMiddleware, userRoutes)
+app.use('/schools', authMiddleware, schoolRoutes)
