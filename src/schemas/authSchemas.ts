@@ -24,5 +24,35 @@ export const loginSchema = z.object({
   password: requiredString('O campo password é obrigatório.'),
 })
 
+export const forgotPasswordSchema = z.object({
+  email: z.email('O campo email é inválido.').transform((email) => email.toLowerCase()),
+})
+
+export const resetPasswordSchema = z.object({
+  token: requiredString('O campo token é obrigatório.'),
+  password: requiredString('O campo password deve ter ao menos 8 caracteres.').min(
+    8,
+    'O campo password deve ter ao menos 8 caracteres.',
+  ),
+})
+
+export const googleLoginSchema = z.object({
+  idToken: requiredString('O campo idToken é obrigatório.'),
+})
+
+export const completeOnboardingSchema = z
+  .object({
+    schoolId: z.number().int().positive('O campo schoolId é inválido.').optional(),
+    roboticsGroupId: z.number().int().positive('O campo roboticsGroupId é inválido.').optional(),
+  })
+  .refine(
+    (data) => Boolean(data.schoolId) || Boolean(data.roboticsGroupId),
+    'Informe schoolId ou roboticsGroupId.',
+  )
+
 export type RegisterData = z.infer<typeof registerSchema>
 export type LoginData = z.infer<typeof loginSchema>
+export type ForgotPasswordData = z.infer<typeof forgotPasswordSchema>
+export type ResetPasswordData = z.infer<typeof resetPasswordSchema>
+export type GoogleLoginData = z.infer<typeof googleLoginSchema>
+export type CompleteOnboardingData = z.infer<typeof completeOnboardingSchema>

@@ -5,6 +5,8 @@ import userRoutes from './routes/userRoutes'
 import schoolRoutes from './routes/schoolRoutes'
 import authRoutes from './routes/authRoutes'
 import { authMiddleware } from './middlewares/authMiddleware'
+import { requireCompletedOnboarding, requireRole } from './middlewares/authorizationMiddleware'
+import { UserRole } from './generated/prisma/enums'
 
 export const app: Express = express()
 
@@ -20,5 +22,17 @@ app.get('/status', (req: Request, res: Response) => {
 })
 
 app.use('/auth', authRoutes)
-app.use('/users', authMiddleware, userRoutes)
-app.use('/schools', authMiddleware, schoolRoutes)
+app.use(
+  '/users',
+  authMiddleware,
+  requireCompletedOnboarding,
+  requireRole(UserRole.ADMIN),
+  userRoutes,
+)
+app.use(
+  '/schools',
+  authMiddleware,
+  requireCompletedOnboarding,
+  requireRole(UserRole.ADMIN),
+  schoolRoutes,
+)
