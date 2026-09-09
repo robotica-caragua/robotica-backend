@@ -1,7 +1,0 @@
-version: 2
-updates:
-  - package-ecosystem: "npm" # O GitHub lê o package.json/pnpm-lock.yaml usando o ecossistema npm
-    directory: "/"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5

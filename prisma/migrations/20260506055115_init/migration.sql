@@ -1,9 +1,0 @@
--- AlterTable
-ALTER TABLE `School` MODIFY `address` VARCHAR(191) NULL;
-
--- AlterTable
-ALTER TABLE `User` ADD COLUMN `role` ENUM('ADMIN', 'TEACHER') NOT NULL DEFAULT 'TEACHER',
-    ADD COLUMN `schoolId` INTEGER NULL;
-
--- AddForeignKey
-ALTER TABLE `User` ADD CONSTRAINT `User_schoolId_fkey` FOREIGN KEY (`schoolId`) REFERENCES `School`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
