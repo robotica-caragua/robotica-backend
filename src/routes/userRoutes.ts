@@ -4,6 +4,7 @@ import { getUsersController } from '../controllers/user/getUsersController'
 import { getUserByIdController } from '../controllers/user/getUserByIdController'
 import { updateUserController } from '../controllers/user/updateUserController'
 import { deleteUserController } from '../controllers/user/deleteUserController'
+import { getUserSchoolByIdController } from '../controllers/user/getUserSchoolByIdController'
 
 const router: Router = Router()
 
@@ -24,7 +25,7 @@ router.get('/', getUsersController)
 router.get('/:id', getUserByIdController)
 router.post('/', createUsersController)
 router.put('/:id', updateUserController)
-router.put('/:id', updateUserController)
 router.delete('/:id', deleteUserController)
+router.get('/:id/school', getUserSchoolByIdController)
 
 export default router

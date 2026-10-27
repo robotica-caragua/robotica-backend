@@ -236,9 +236,9 @@ export async function createOrUpdateGoogleUser(data: {
         : TeacherOnboardingStatus.PENDING,
       ...(data.schoolId
         ? {
-            onboardingCompletedAt: new Date(),
-            school: { connect: { id: data.schoolId } },
-          }
+          onboardingCompletedAt: new Date(),
+          school: { connect: { id: data.schoolId } },
+        }
         : {}),
     },
     select: authUserSelect,
@@ -294,8 +294,8 @@ export async function createAuthUser(data: {
           : TeacherOnboardingStatus.PENDING,
       ...(data.role === UserRole.ADMIN || data.schoolId
         ? {
-            onboardingCompletedAt: new Date(),
-          }
+          onboardingCompletedAt: new Date(),
+        }
         : {}),
       ...(data.schoolId ? { school: { connect: { id: data.schoolId } } } : {}),
     },

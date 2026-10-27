@@ -23,33 +23,34 @@ enum TeacherOnboardingStatus {
 }
 
 model User {
-  id                     Int                     @id @default(autoincrement())
-  name                   String
-  email                  String                  @unique
-  password               String
-  role                   UserRole                @default(TEACHER)
-  authProvider           AuthProvider            @default(LOCAL)
-  googleId               String?                 @unique
-  onboardingStatus       TeacherOnboardingStatus @default(PENDING)
-  onboardingCompletedAt  DateTime?
+  id                    Int                     @id @default(autoincrement())
+  name                  String
+  email                 String                  @unique
+  password              String
+  role                  UserRole                @default(TEACHER)
+  authProvider          AuthProvider            @default(LOCAL)
+  googleId              String?                 @unique
+  onboardingStatus      TeacherOnboardingStatus @default(PENDING)
+  onboardingCompletedAt DateTime?
 
-  schoolId               Int?
-  school                 School?                 @relation(fields: [schoolId], references: [id])
-  roboticsGroupId        Int?
-  roboticsGroup          RoboticsGroup?          @relation(fields: [roboticsGroupId], references: [id])
-  authSessions           AuthSession[]
-  passwordResetTokens    PasswordResetToken[]
+  schoolId            Int?
+  school              School?                 @relation(fields: [schoolId], references: [id])
+  roboticsGroupId     Int?
+  roboticsGroup       RoboticsGroup?          @relation(fields: [roboticsGroupId], references: [id])
+  authSessions        AuthSession[]
+  passwordResetTokens PasswordResetToken[]
 
-  createdAt              DateTime                @default(now())
-  updatedAt              DateTime                @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model School {
-  id        Int      @id @default(autoincrement())
+  id        Int        @id @default(autoincrement())
   name      String
   address   String?
-
   users     User[]
+  projects  Project[]
+  tutorials Tutorial[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -58,12 +59,49 @@ model School {
 model RoboticsGroup {
   id        Int      @id @default(autoincrement())
   name      String   @unique
-
   users     User[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model Project {
+  id          Int      @id @default(autoincrement())
+  name        String
+  description String?
+  schoolId    Int
+  school      School   @relation(fields: [schoolId], references: [id])
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Tutorial {
+  id              Int        @id @default(autoincrement())
+  title           String
+  description     String
+  categoryId      Int
+  category        Category   @relation(fields: [categoryId], references: [id])
+  difficulty      Difficulty
+  schoolId        Int
+  school          School     @relation(fields: [schoolId], references: [id])
+  materialsNeeded Json
+  tutorialUrl     String?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String
+  tutorials Tutorial[]
+}
+
 
 model AuthSession {
   id                Int      @id @default(autoincrement())
