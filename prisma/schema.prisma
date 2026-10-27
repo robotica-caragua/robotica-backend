@@ -1,6 +1,5 @@
 generator client {
-  provider = "prisma-client"
-  output   = "../src/generated/prisma"
+  provider = "prisma-client-js"
 }
 
 datasource db {
@@ -101,8 +100,6 @@ model Category {
   name      String
   tutorials Tutorial[]
 }
-
-
 model AuthSession {
   id                Int      @id @default(autoincrement())
   userId            Int

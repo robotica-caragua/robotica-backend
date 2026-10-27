@@ -6,5 +6,9 @@
 
 */
 -- AlterTable
+<<<<<<< HEAD
 ALTER TABLE `tutorial` MODIFY `description` VARCHAR(191) NOT NULL,
+=======
+ALTER TABLE `Tutorial` MODIFY `description` VARCHAR(191) NOT NULL,
+>>>>>>> origin/refactor
     MODIFY `materialsNeeded` JSON NOT NULL;

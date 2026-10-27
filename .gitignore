@@ -3,10 +3,7 @@ node_modules
 .env
 
 /src/generated/prisma
-
-pnpm-lock.yaml
-package-lock.json
-
-/dist
-
 .idea
+pnpm-lock.yaml
+.local/
+coverage/
