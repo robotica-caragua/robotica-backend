@@ -1,3 +1,4 @@
+import { AdminProvisioner } from '../src/modules/users/AdminProvisioner.js'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import bcrypt from 'bcrypt'
@@ -19,7 +20,12 @@ async function fixture(t, options = {}) {
   const register = (overrides = {}) => request('POST', '/auth/register', {
     name: 'Professor', email: 'teacher@school.example', password: 'original-password', ...overrides,
   })
-  return { app, db, mail, request, register }
+  const createAdmin = async (email = 'admin@school.example') => {
+    await register({ email })
+    await new AdminProvisioner(db).promote(email)
+    return request('POST', '/auth/login', { email, password: 'original-password' })
+  }
+  return { app, db, mail, request, register, createAdmin }
 }
 const bearer = (token) => ({ authorization: `Bearer ${token}` })
 const refreshCookie = (result) => result.headers['set-cookie'].split(';')[0]
@@ -118,8 +124,8 @@ test('teacher onboarding checks relations and issues an updated access token', a
 })
 
 test('CRUD for users/schools preserves envelopes, validation, password secrecy and user school lookup', async t => {
-  const { request, register } = await fixture(t)
-  const admin = await register({ role: 'ADMIN', email: 'admin@school.example' })
+  const { request, createAdmin } = await fixture(t)
+  const admin = await createAdmin()
   const headers = bearer(admin.body.accessToken)
   const school = await request('POST', '/schools', { name: 'Escola', address: 'Rua A' }, headers)
   assert.equal(school.status, 201)
@@ -137,10 +143,10 @@ test('CRUD for users/schools preserves envelopes, validation, password secrecy a
 })
 
 test('categories, tutorials and projects are wired and update all declared fields', async t => {
-  const { request, register } = await fixture(t)
+  const { request, createAdmin } = await fixture(t)
   assert.equal((await request('GET', '/categories')).status, 404)
   const category = (await request('POST', '/categories', { name: 'Mecânica' })).body.category
-  const admin = await register({ role: 'ADMIN' })
+  const admin = await createAdmin()
   const headers = bearer(admin.body.accessToken)
   const school = (await request('POST', '/schools', { name: 'Escola' }, headers)).body.school
   const tutorial = await request('POST', '/tutorials', { title: 'Robô', description: 'Montagem', categoryId: category.id,

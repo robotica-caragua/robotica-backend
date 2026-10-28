@@ -110,7 +110,21 @@ As migrações históricas foram reunidas em ordem, sem exclusão de dados. Na m
 - Email usa `SMTP_*`, `MAIL_FROM` e `APP_BASE_URL`. Sem SMTP em desenvolvimento, os links ficam em arquivos privados de `.local/mail/`, em vez de aparecer nos logs. Em produção, a ausência de SMTP retorna 503 para a operação de envio. Nunca versione esses arquivos ou exponha links de redefinição.
 - POSTs de autenticação têm limite de 30 requisições por minuto/IP. Em implantação atrás de proxy, configure a confiança no proxy conforme a infraestrutura, sem confiar indiscriminadamente em cabeçalhos externos.
 
-**Regra herdada a revisar antes de produção:** `/auth/register` continua aceitando `role: ADMIN`, como a `develop`. Portanto, cadastro público pode criar administradores. Isso foi mantido para compatibilidade, não deve ser interpretado como um modelo seguro de provisionamento de administradores. Categorias/tutoriais públicos também refletem a branch original.
+### Criar a primeira conta administradora
+
+O cadastro público em `/auth/register` cria sempre `TEACHER`. Enviar `role: ADMIN` não concede privilégios: o campo é ignorado pelo schema e o serviço fixa o perfil, mesmo se chamado sem o validador HTTP.
+
+1. Cadastre a conta normalmente, com email e senha próprios.
+2. Na máquina de um responsável com acesso ao banco, confira se `DATABASE_URL` aponta para o banco correto e execute:
+
+```bash
+npm run admin:promote -- seu-email@exemplo.com
+```
+
+O comando interno promove somente uma conta existente, conclui seu onboarding e revoga seus refresh tokens. Não cria conta, não define senha padrão e não expõe uma rota pública. A mesma senha continua válida. Faça login novamente para obter um token com perfil `ADMIN`; tokens anteriores não ganham novos privilégios.
+
+Administradores existentes permanecem administradores. Depois de provisionar o primeiro, um administrador autenticado também pode gerenciar perfis pelas rotas protegidas de usuários. Restrinja acesso ao servidor e às credenciais do banco a responsáveis autorizados. Categorias e tutoriais continuam públicos conforme a branch original.
+
 
 ## Rotas
 

@@ -1,3 +1,4 @@
+import { AdminProvisioner } from '../src/modules/users/AdminProvisioner.js'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -21,9 +22,12 @@ test('Prisma/MariaDB: authentication, relations, constraints and token transacti
     return { status: response.statusCode, body: response.json(), headers: response.headers }
   }
   try {
-    const admin = await request('POST', '/auth/register', { name: 'Test admin', email: `${suffix}@test.example`, password: 'integration-password', role: 'ADMIN' })
+    let admin = await request('POST', '/auth/register', { name: 'Test admin', email: `${suffix}@test.example`, password: 'integration-password' })
     assert.equal(admin.status, 201)
     ids.users.push(admin.body.user.id)
+    await new AdminProvisioner(db).promote(`${suffix}@test.example`)
+    admin = await request('POST', '/auth/login', { email: `${suffix}@test.example`, password: 'integration-password' })
+    assert.equal(admin.status, 200)
     const headers = { authorization: `Bearer ${admin.body.accessToken}` }
     const school = await request('POST', '/schools', { name: `Test ${suffix}` }, headers)
     assert.equal(school.status, 201)

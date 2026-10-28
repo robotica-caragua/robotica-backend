@@ -22,9 +22,9 @@ export class AuthService {
   }
 
   async register(data) {
-    const role = data.role || 'TEACHER'
-    const completed = role === 'ADMIN' || Boolean(data.schoolId)
-    const user = await this.users.create({ ...data, role, password: await this.passwords.hash(data.password),
+    const role = 'TEACHER'
+    const completed = Boolean(data.schoolId)
+    const user = await this.users.create({ name: data.name, email: data.email, schoolId: data.schoolId, role, password: await this.passwords.hash(data.password),
       authProvider: 'LOCAL', onboardingStatus: completed ? 'COMPLETED' : 'PENDING',
       onboardingCompletedAt: completed ? new Date() : null })
     return this.issueSession(user)
