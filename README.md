@@ -6,11 +6,11 @@ API em **JavaScript ESM, Fastify 5 e Prisma 7**, implementada na branch `refacto
 
 Nenhuma das branches anteriores continha todas as funcionalidades:
 
-| Branch de referência | Commit consultado | Conteúdo utilizado |
-| --- | --- | --- |
-| `develop` | `cee6b44` | Login local/Google, sessões, recuperação de senha, onboarding, autorização |
-| `joao` | `dbe2248` | CRUDs de usuários, escolas, projetos, categorias e tutoriais; consulta da escola do usuário |
-| `refactor` | `6f7efe0` | Base JavaScript/Fastify, estrutura modular e dependências |
+| Branch de referência | Commit consultado | Conteúdo utilizado                                                                          |
+| -------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| `develop`            | `cee6b44`         | Login local/Google, sessões, recuperação de senha, onboarding, autorização                  |
+| `joao`               | `dbe2248`         | CRUDs de usuários, escolas, projetos, categorias e tutoriais; consulta da escola do usuário |
+| `refactor`           | `6f7efe0`         | Base JavaScript/Fastify, estrutura modular e dependências                                   |
 
 As URLs e os envelopes de resposta foram mantidos, por exemplo `{ message, user }`, `{ message, users }` e `{ message, accessToken, session }`. Usuários/escolas continuam restritos a administradores, conforme `develop`; categorias/tutoriais mantêm o acesso público da `joao`. Projetos agora têm rotas registradas e exigem autenticação e onboarding concluído.
 
@@ -45,8 +45,11 @@ flowchart LR
 
 ```js
 const strategies = new Map([
-  ['local', new LocalAuthenticationStrategy(users, passwords)],
-  ['google', new GoogleAuthenticationStrategy(users, passwords, googleClient, config)],
+  ["local", new LocalAuthenticationStrategy(users, passwords)],
+  [
+    "google",
+    new GoogleAuthenticationStrategy(users, passwords, googleClient, config),
+  ],
 ])
 ```
 
@@ -89,8 +92,11 @@ Configure `DATABASE_URL` para um banco MySQL/MariaDB e preencha `JWT_ACCESS_SECR
 npm run db:generate
 npm run db:migrate
 npm run db:status
+npm run db:seed
 npm run dev
 ```
+
+`npm run db:seed` é idempotente e cria dados locais para teste. O usuário demo é `demo@robotica.local` com a senha `Demo@123456`; não use essas credenciais fora do ambiente local.
 
 `npm start` inicia sem watch; `GET /status` deve responder `{"status":"ok","message":"API  online"}`. O servidor conecta ao banco antes de aceitar requisições e encerra suas conexões em SIGINT/SIGTERM. Dependências instaladas e dados em disco podem ser retidos, mas os processos precisam ser iniciados novamente em cada ambiente.
 
@@ -114,21 +120,21 @@ As migrações históricas foram reunidas em ordem, sem exclusão de dados. Na m
 
 ## Rotas
 
-| Método | Caminho | Acesso |
-| --- | --- | --- |
-| GET | `/status` | Público |
-| POST | `/auth/register`, `/auth/login`, `/auth/google` | Público |
-| POST | `/auth/refresh`, `/auth/logout` | Refresh token quando aplicável |
-| POST | `/auth/forgot-password`, `/auth/reset-password` | Público/token de recuperação |
-| GET | `/auth/me` | Bearer |
-| POST | `/auth/onboarding` | Professor autenticado |
-| GET/POST | `/users`, `/schools` | Admin |
-| GET/PUT/DELETE | `/users/:id`, `/schools/:id` | Admin |
-| GET | `/users/:id/school` | Admin |
-| GET/POST | `/projects` | Autenticado com onboarding concluído |
-| GET/PUT/DELETE | `/projects/:id` | Autenticado com onboarding concluído |
-| GET/POST | `/categories`, `/tutorials` | Público, como na `joao` |
-| GET/PUT/DELETE | `/categories/:id`, `/tutorials/:id` | Público, como na `joao` |
+| Método         | Caminho                                         | Acesso                               |
+| -------------- | ----------------------------------------------- | ------------------------------------ |
+| GET            | `/status`                                       | Público                              |
+| POST           | `/auth/register`, `/auth/login`, `/auth/google` | Público                              |
+| POST           | `/auth/refresh`, `/auth/logout`                 | Refresh token quando aplicável       |
+| POST           | `/auth/forgot-password`, `/auth/reset-password` | Público/token de recuperação         |
+| GET            | `/auth/me`                                      | Bearer                               |
+| POST           | `/auth/onboarding`                              | Professor autenticado                |
+| GET/POST       | `/users`, `/schools`                            | Admin                                |
+| GET/PUT/DELETE | `/users/:id`, `/schools/:id`                    | Admin                                |
+| GET            | `/users/:id/school`                             | Admin                                |
+| GET/POST       | `/projects`                                     | Autenticado com onboarding concluído |
+| GET/PUT/DELETE | `/projects/:id`                                 | Autenticado com onboarding concluído |
+| GET/POST       | `/categories`, `/tutorials`                     | Público, como na `joao`              |
+| GET/PUT/DELETE | `/categories/:id`, `/tutorials/:id`             | Público, como na `joao`              |
 
 ## Validação
 
