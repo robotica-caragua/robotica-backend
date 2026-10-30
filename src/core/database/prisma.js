@@ -12,6 +12,7 @@ export async function createDatabase(config) {
     password: decodeURIComponent(url.password),
     database: decodeURIComponent(url.pathname.slice(1)),
     connectionLimit: 5,
+    allowPublicKeyRetrieval: true,
   })
   return new PrismaClient({ adapter })
 }

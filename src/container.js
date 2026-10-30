@@ -16,12 +16,26 @@ import { LocalAuthenticationStrategy } from './modules/auth/strategies/LocalAuth
 import { GoogleAuthenticationStrategy } from './modules/auth/strategies/GoogleAuthenticationStrategy.js'
 import { resourceDefinitions } from './modules/resources.js'
 
+class SchoolRepository extends PrismaRepository {
+  constructor(db, select) {
+    super(db.school, select)
+    this.db = db
+  }
+  async delete(id) {
+    await this.db.user.updateMany({ where: { schoolId: id }, data: { schoolId: null } })
+    await this.db.project.deleteMany({ where: { schoolId: id } })
+    await this.db.tutorial.deleteMany({ where: { schoolId: id } })
+    return super.delete(id)
+  }
+}
+
 // Composition root: dependencies are wired here, never inside controllers.
 export function createContainer({ db, jwt, config, overrides = {} }) {
   const users = new UserRepository(db)
   const passwords = overrides.passwords || new PasswordHasher()
   const tokens = new TokenService(jwt, config)
-  const repositories = { users }
+  const schools = new SchoolRepository(db, resourceDefinitions.schools.select)
+  const repositories = { users, schools }
   const controllers = {}
   for (const [name, definition] of Object.entries(resourceDefinitions)) {
     const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)

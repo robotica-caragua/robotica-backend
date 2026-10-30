@@ -12,47 +12,70 @@ const passwords = new PasswordHasher()
 
 async function findOrCreateSchool(data) {
   const existing = await db.school.findFirst({ where: { name: data.name } })
-  return existing || db.school.create({ data })
-}
-
-async function findOrCreateCategory(name) {
-  const existing = await db.category.findFirst({ where: { name } })
-  return existing || db.category.create({ data: { name } })
-}
-
-async function findOrCreateProject(data) {
-  const existing = await db.project.findFirst({ where: { name: data.name } })
-  return existing || db.project.create({ data })
-}
-
-async function findOrCreateTutorial(data) {
-  const existing = await db.tutorial.findFirst({ where: { title: data.title } })
-  return existing || db.tutorial.create({ data })
+  if (existing) {
+    return db.school.update({
+      where: { id: existing.id },
+      data: { address: data.address },
+    })
+  }
+  return db.school.create({ data })
 }
 
 try {
   await db.$connect()
 
-  const school = await findOrCreateSchool({
-    name: "Escola Municipal BioBot",
-    address: "Av. da Tecnologia, 100 - Caraguatatuba/SP",
-  })
-  const category = await findOrCreateCategory("Introdução à Robótica")
-  const advancedCategory = await findOrCreateCategory("Programação")
+  // As 4 escolas oficiais da rede municipal de Caraguatatuba
+  const escolasOficiais = [
+    {
+      name: "EMEF Profª Maria Aparecida De Carvalho",
+      address: "R. Seishi Yoshimoto, 120 - Getuba, Caraguatatuba - SP, 11676-403",
+    },
+    {
+      name: "EMEF Prof. Luiz Ribeiro Muniz",
+      address: "R. Analândia, 355 - Martim de Sá, Caraguatatuba - SP, 11662-320",
+    },
+    {
+      name: "EMEF Prof. Luiz Silvar do Prado",
+      address: "R. José Pedro de Oliveira Barbosa, 805 - Jardim Casa Branca, Caraguatatuba - SP",
+    },
+    {
+      name: "EMEF Profª Maria Thereza de Souza Castro",
+      address: "R. Seishi Yoshimoto, 120 - Getuba, Caraguatatuba - SP, 11676-403",
+    },
+  ]
 
-  const password = await passwords.hash("Demo@123456")
-  const user = await db.user.upsert({
-    where: { email: "demo@robotica.local" },
+  const escolasCriadas = []
+  for (const esc of escolasOficiais) {
+    const criada = await findOrCreateSchool(esc)
+    escolasCriadas.push(criada)
+  }
+
+  const school = escolasCriadas[0]
+
+  // Limpa tutoriais e projetos para manter banco limpo
+  await db.tutorial.deleteMany({})
+  await db.project.deleteMany({})
+
+  // Remove usuário demo
+  await db.user.deleteMany({
+    where: { email: { in: ["demo@robotica.local", "demo@gmail.com"] } }
+  })
+
+  // Usuário Administrador
+  const passwordAdmin = await passwords.hash("Admin123@")
+  const admin = await db.user.upsert({
+    where: { email: "admin@gmail.com" },
     update: {
-      name: "Professor Demo",
+      name: "Administrador",
+      password: passwordAdmin,
       role: "ADMIN",
       schoolId: school.id,
       onboardingStatus: "COMPLETED",
     },
     create: {
-      name: "Professor Demo",
-      email: "demo@robotica.local",
-      password,
+      name: "Administrador",
+      email: "admin@gmail.com",
+      password: passwordAdmin,
       role: "ADMIN",
       authProvider: "LOCAL",
       schoolId: school.id,
@@ -61,46 +84,46 @@ try {
     },
   })
 
-  const project = await findOrCreateProject({
-    name: "Robô seguidor de linha",
-    description:
-      "Projeto introdutório para montar e programar um robô seguidor de linha.",
-    schoolId: school.id,
-  })
-  const tutorial = await findOrCreateTutorial({
-    title: "Primeiros passos com sensores",
-    description: "Aprenda a ler um sensor e controlar os motores de um robô.",
-    categoryId: category.id,
-    difficulty: "EASY",
-    schoolId: school.id,
-    materialsNeeded: ["Arduino Uno", "Sensor infravermelho", "Kit de motores"],
-    tutorialUrl: "https://example.com/tutorial/sensores",
-  })
-  const advancedTutorial = await findOrCreateTutorial({
-    title: "Lógica condicional para robôs",
-    description: "Use condições para criar comportamentos responsivos.",
-    categoryId: advancedCategory.id,
-    difficulty: "MEDIUM",
-    schoolId: school.id,
-    materialsNeeded: ["Arduino Uno", "Protoboard", "Cabos jumper"],
-    tutorialUrl: "https://example.com/tutorial/logica",
+  // Usuário Professor Robson
+  const passwordRobson = await passwords.hash("Robson123@")
+  const robson = await db.user.upsert({
+    where: { email: "robson@gmail.com" },
+    update: {
+      name: "Prof. Robson Nascimento",
+      password: passwordRobson,
+      role: "TEACHER",
+      schoolId: school.id,
+      onboardingStatus: "COMPLETED",
+    },
+    create: {
+      name: "Prof. Robson Nascimento",
+      email: "robson@gmail.com",
+      password: passwordRobson,
+      role: "TEACHER",
+      authProvider: "LOCAL",
+      schoolId: school.id,
+      onboardingStatus: "COMPLETED",
+      onboardingCompletedAt: new Date(),
+    },
   })
 
   console.log(
     JSON.stringify(
       {
-        message: "Seed concluído com sucesso.",
-        credentials: { email: user.email, password: "Demo@123456" },
-        records: {
-          schoolId: school.id,
-          projectId: project.id,
-          tutorialIds: [tutorial.id, advancedTutorial.id],
-        },
+        message: "Seed atualizado com sucesso. Apenas as escolas e usuários solicitados mantidos.",
+        escolas: escolasCriadas.map((e) => ({ id: e.id, name: e.name })),
+        usuarios: [
+          { email: admin.email, role: admin.role },
+          { email: robson.email, role: robson.role }
+        ]
       },
       null,
-      2,
-    ),
+      2
+    )
   )
+} catch (error) {
+  console.error("Erro no seed:", error)
+  process.exitCode = 1
 } finally {
   await db.$disconnect()
 }

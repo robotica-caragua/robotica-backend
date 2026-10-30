@@ -12,7 +12,12 @@ import { userRoutes } from "./modules/users/routes.js"
 
 export async function buildApp({ db, config, overrides, logger = false }) {
   const app = Fastify({ logger, routerOptions: { ignoreTrailingSlash: true } })
-  await app.register(cors, { origin: config.WEB_ORIGIN, credentials: true })
+  await app.register(cors, {
+    origin: config.WEB_ORIGIN ?? true,
+    credentials: true,
+    methods: ["GET", "HEAD", "PUT", "POST", "DELETE", "OPTIONS", "PATCH"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Requested-With"],
+  })
   await app.register(helmet)
   await app.register(cookie)
   await app.register(jwt, { secret: config.JWT_ACCESS_SECRET })
@@ -42,6 +47,7 @@ export async function buildApp({ db, config, overrides, logger = false }) {
     container.policy.role("ADMIN"),
   ]
   registerCrudRoutes(app, "/schools", container.controllers.schools, admin)
+  app.get("/public/schools", container.controllers.schools.list)
   // These resources were public in joao; preserve their existing HTTP access.
   registerCrudRoutes(app, "/categories", container.controllers.categories)
   registerCrudRoutes(app, "/tutorials", container.controllers.tutorials)
