@@ -1,44 +1,57 @@
 {
   "name": "robotica-backend",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "API de Robótica em JavaScript, Fastify, POO e Strategy",
+  "private": true,
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "tsx watch src/server.ts",
-    "build": "tsc",
-    "start": "node dist/server.js",
-    "lint": "eslint src",
-    "lint:fix": "eslint src --fix",
-    "format": "prettier . --write"
+    "test": "node --test test/*.test.js",
+    "dev": "node --watch src/server.js",
+    "start": "node src/server.js",
+    "test:db": "node --test test/database.integration.js",
+    "check": "node scripts/check.js",
+    "lint": "eslint src test scripts",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "db:seed": "node scripts/seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/robotica-caragua/robotica-backend.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "packageManager": "pnpm@10.33.0",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/robotica-caragua/robotica-backend/issues"
+  },
+  "homepage": "https://github.com/robotica-caragua/robotica-backend#readme",
   "dependencies": {
-    "@prisma/adapter-mariadb": "^7.8.0",
-    "@prisma/client": "^7.8.0",
+    "@fastify/cookie": "^11.1.2",
+    "@fastify/cors": "^11.3.0",
+    "@fastify/helmet": "^13.1.1",
+    "@fastify/jwt": "^10.2.2",
+    "@fastify/rate-limit": "^11.2.0",
+    "@fastify/swagger": "^9.8.1",
+    "@fastify/swagger-ui": "^6.1.1",
+    "@prisma/adapter-mariadb": "^7.10.0",
+    "@prisma/client": "^7.10.0",
+    "argon2": "^0.45.1",
     "bcrypt": "^6.0.0",
-    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
-    "express": "^5.2.1",
-    "helmet": "^8.1.0",
-    "jsonwebtoken": "^9.0.3",
-    "prisma": "^7.8.0"
+    "fastify": "^5.12.3",
+    "fastify-plugin": "^6.0.0",
+    "google-auth-library": "^10.9.1",
+    "nodemailer": "^7.0.13",
+    "zod": "^4.5.4"
   },
   "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "@types/bcrypt": "^6.0.0",
-    "@types/cors": "^2.8.19",
-    "@types/express": "^5.0.6",
-    "@types/jsonwebtoken": "^9.0.10",
-    "@types/node": "^25.6.0",
-    "eslint": "^10.3.0",
-    "eslint-config-prettier": "^10.1.8",
-    "prettier": "^3.8.3",
-    "tsx": "^4.21.0",
-    "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.2"
+    "eslint": "^10.10.0",
+    "prettier": "^3.9.6",
+    "prisma": "^7.10.0"
+  },
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
