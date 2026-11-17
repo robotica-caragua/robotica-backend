@@ -40,7 +40,7 @@ test('Prisma/MariaDB: authentication, relations, constraints and token transacti
     assert.deepEqual(tutorial.body.tutorial.materialsNeeded, ['Motor'])
     assert.equal((await request('PUT', `/tutorials/${ids.tutorial}`, { title: 'Updated' })).body.tutorial.title, 'Updated')
     assert.equal((await request('DELETE', `/categories/${ids.category}`)).status, 400)
-    const project = await request('POST', '/projects', { name: 'Test project', schoolId: ids.school }, headers)
+    const project = await request('POST', '/projects', { name: 'Test project', students: ['Test student'], schoolId: ids.school }, headers)
     assert.equal(project.status, 201)
     ids.project = project.body.project.id
     const cookie = admin.headers['set-cookie'].split(';')[0]
