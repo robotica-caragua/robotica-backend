@@ -131,6 +131,9 @@ As migrações históricas foram reunidas em ordem, sem exclusão de dados. Na m
 | GET/POST       | `/users`, `/schools`                            | Admin                                |
 | GET/PUT/DELETE | `/users/:id`, `/schools/:id`                    | Admin                                |
 | GET            | `/users/:id/school`                             | Admin                                |
+| GET            | `/users?status=` (Pendente/Deferido/Indeferido) | Admin                              |
+| PATCH          | `/users/:id/approval` (`{ status }`)          | Admin: aprova/rejeita professor    |
+| PUT            | `/users/me` (nome/email)                      | Professor autenticado                |
 | GET/POST       | `/projects`                                     | Autenticado com onboarding concluído |
 | GET/PUT/DELETE | `/projects/:id`                                 | Autenticado com onboarding concluído |
 | GET/POST       | `/categories`, `/tutorials`                     | Público, como na `joao`              |

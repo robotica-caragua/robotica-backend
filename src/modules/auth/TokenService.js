@@ -3,7 +3,8 @@ import { randomBytes, createHash } from 'node:crypto'
 export class TokenService {
   constructor(jwt, config) { Object.assign(this, { jwt, config }) }
   sign(user) {
-    return this.jwt.sign({ userId: user.id, role: user.role, onboardingStatus: user.onboardingStatus }, {
+    return this.jwt.sign({ userId: user.id, role: user.role, onboardingStatus: user.onboardingStatus,
+      approvalStatus: user.approvalStatus }, {
       expiresIn: this.config.JWT_ACCESS_EXPIRES_IN,
     })
   }

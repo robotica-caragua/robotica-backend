@@ -71,6 +71,7 @@ try {
       role: "ADMIN",
       schoolId: school.id,
       onboardingStatus: "COMPLETED",
+      approvalStatus: "APPROVED",
     },
     create: {
       name: "Administrador",
@@ -80,6 +81,7 @@ try {
       authProvider: "LOCAL",
       schoolId: school.id,
       onboardingStatus: "COMPLETED",
+      approvalStatus: "APPROVED",
       onboardingCompletedAt: new Date(),
     },
   })
@@ -94,6 +96,7 @@ try {
       role: "TEACHER",
       schoolId: school.id,
       onboardingStatus: "COMPLETED",
+      approvalStatus: "APPROVED",
     },
     create: {
       name: "Prof. Robson Nascimento",
@@ -103,6 +106,7 @@ try {
       authProvider: "LOCAL",
       schoolId: school.id,
       onboardingStatus: "COMPLETED",
+      approvalStatus: "APPROVED",
       onboardingCompletedAt: new Date(),
     },
   })

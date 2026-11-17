@@ -29,3 +29,27 @@ export const updateUserSchema = createUserSchema
     (data) => Object.keys(data).length > 0,
     "Informe ao menos um campo para atualização.",
   )
+
+const approvalAliases = { PENDENTE: "PENDING", DEFERIDO: "APPROVED", INDEFERIDO: "REJECTED" }
+const approvalStatusSchema = z.preprocess(
+  (value) => {
+    if (typeof value !== "string") return value
+    const normalized = value.trim().toUpperCase()
+    return approvalAliases[normalized] ?? normalized
+  },
+  z.enum(["PENDING", "APPROVED", "REJECTED"], {
+    error: "O campo status deve ser Pendente, Deferido ou Indeferido.",
+  }),
+)
+
+export const updateApprovalSchema = z.object({ status: approvalStatusSchema })
+
+export const listUsersQuerySchema = z.object({ status: approvalStatusSchema.optional() })
+
+export const updateProfileSchema = createUserSchema
+  .pick({ name: true, email: true })
+  .partial()
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    "Informe ao menos um campo para atualização.",
+  )

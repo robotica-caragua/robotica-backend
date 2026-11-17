@@ -14,6 +14,8 @@ import { TokenService } from './modules/auth/TokenService.js'
 import { PasswordResetMailer } from './modules/auth/PasswordResetMailer.js'
 import { LocalAuthenticationStrategy } from './modules/auth/strategies/LocalAuthenticationStrategy.js'
 import { GoogleAuthenticationStrategy } from './modules/auth/strategies/GoogleAuthenticationStrategy.js'
+import { ProjectService } from './modules/projects/ProjectService.js'
+import { ProjectController } from './modules/projects/ProjectController.js'
 import { resourceDefinitions } from './modules/resources.js'
 
 class SchoolRepository extends PrismaRepository {
@@ -40,10 +42,12 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
   for (const [name, definition] of Object.entries(resourceDefinitions)) {
     const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)
     repositories[name] = repository
-    const service = name === 'users'
-      ? new UserService(repository, definition, passwords) : new CrudService(repository, definition)
-    controllers[name] = name === 'users'
-      ? new UserController(service, definition) : new CrudController(service, definition)
+    const service = {
+      users: () => new UserService(repository, definition, passwords),
+      projects: () => new ProjectService(repository, definition, users),
+    }[name]?.() || new CrudService(repository, definition)
+    const Controller = { users: UserController, projects: ProjectController }[name] || CrudController
+    controllers[name] = new Controller(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],

@@ -3,8 +3,8 @@ export class User {
   get onboardingAllowed() { return this.role !== 'TEACHER' || this.onboardingStatus === 'COMPLETED' }
   toPublic() {
     const { id, name, email, role, authProvider, onboardingStatus, onboardingCompletedAt,
-      schoolId, roboticsGroupId, createdAt, updatedAt } = this
+      approvalStatus, schoolId, roboticsGroupId, createdAt, updatedAt } = this
     return { id, name, email, role, authProvider, onboardingStatus, onboardingCompletedAt,
-      schoolId, roboticsGroupId, createdAt, updatedAt }
+      approvalStatus, schoolId, roboticsGroupId, createdAt, updatedAt }
   }
 }

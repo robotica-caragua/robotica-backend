@@ -14,6 +14,9 @@ export class AccessPolicy {
   }
 
   completed = async (request) => {
+    if (request.authUser.role === 'TEACHER' && request.authUser.approvalStatus !== 'APPROVED') {
+      throw new AppError(403, 'Seu cadastro ainda não foi aprovado por um administrador.')
+    }
     if (request.authUser.role === 'TEACHER' && request.authUser.onboardingStatus !== 'COMPLETED') {
       throw new AppError(403, 'Finalize o onboarding para continuar.')
     }
