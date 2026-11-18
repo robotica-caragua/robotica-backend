@@ -14,6 +14,8 @@ import { TokenService } from './modules/auth/TokenService.js'
 import { PasswordResetMailer } from './modules/auth/PasswordResetMailer.js'
 import { LocalAuthenticationStrategy } from './modules/auth/strategies/LocalAuthenticationStrategy.js'
 import { GoogleAuthenticationStrategy } from './modules/auth/strategies/GoogleAuthenticationStrategy.js'
+import { TutorialService } from './modules/tutorials/TutorialService.js'
+import { TutorialController } from './modules/tutorials/TutorialController.js'
 import { resourceDefinitions } from './modules/resources.js'
 
 // Composition root: dependencies are wired here, never inside controllers.
@@ -26,10 +28,12 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
   for (const [name, definition] of Object.entries(resourceDefinitions)) {
     const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)
     repositories[name] = repository
-    const service = name === 'users'
-      ? new UserService(repository, definition, passwords) : new CrudService(repository, definition)
-    controllers[name] = name === 'users'
-      ? new UserController(service, definition) : new CrudController(service, definition)
+    const service = name === 'users' ? new UserService(repository, definition, passwords)
+      : name === 'tutorials' ? new TutorialService(repository, definition, users)
+        : new CrudService(repository, definition)
+    controllers[name] = name === 'users' ? new UserController(service, definition)
+      : name === 'tutorials' ? new TutorialController(service, definition)
+        : new CrudController(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],
@@ -42,3 +46,4 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     mailer: overrides.mailer || new PasswordResetMailer(config), config })
   return { controllers, auth: new AuthController(authService, tokens), policy: new AccessPolicy(tokens) }
 }
+
