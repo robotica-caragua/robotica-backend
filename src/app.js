@@ -31,12 +31,15 @@ export async function buildApp({ db, config, overrides, logger = false }) {
   userRoutes(app, container.controllers.users, container.policy)
   const admin = [container.policy.authenticate, container.policy.completed, container.policy.role('ADMIN')]
   registerCrudRoutes(app, '/schools', container.controllers.schools, admin)
-  // These resources were public in joao; preserve their existing HTTP access.
-  registerCrudRoutes(app, '/categories', container.controllers.categories)
-  registerCrudRoutes(app, '/tutorials', container.controllers.tutorials)
+  // Reads stay public; writes require auth. Categories: ADMIN only. Tutorials: ADMIN or same-school teacher.
+  const session = [container.policy.authenticate, container.policy.completed]
+  registerCrudRoutes(app, '/categories', container.controllers.categories, [], [...session, container.policy.role('ADMIN')])
+  registerCrudRoutes(app, '/tutorials', container.controllers.tutorials, [],
+    [...session, container.policy.role('ADMIN', 'TEACHER')])
   registerCrudRoutes(app, '/projects', container.controllers.projects,
     [container.policy.authenticate, container.policy.completed])
   app.addHook('onClose', async () => { await db.$disconnect?.() })
   await app.ready()
   return app
 }
+

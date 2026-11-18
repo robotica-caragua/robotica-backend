@@ -39,7 +39,7 @@ test('status, validation and protected endpoints preserve the HTTP contract', as
   assert.equal((await request('GET', '/schools', undefined, bearer('invalid'))).status, 401)
   assert.equal((await request('GET', '/categories/1.5')).status, 400)
   assert.equal((await request('GET', '/tutorials/0')).status, 400)
-  assert.equal((await request('PUT', '/categories/1', {})).status, 400)
+  assert.equal((await request('PUT', '/categories/1', {})).status, 401)
 })
 
 test('register, login, me, duplicate email and password rejection', async t => {
@@ -145,25 +145,59 @@ test('CRUD for users/schools preserves envelopes, validation, password secrecy a
 test('categories, tutorials and projects are wired and update all declared fields', async t => {
   const { request, createAdmin } = await fixture(t)
   assert.equal((await request('GET', '/categories')).status, 404)
-  const category = (await request('POST', '/categories', { name: 'Mecânica' })).body.category
   const admin = await createAdmin()
   const headers = bearer(admin.body.accessToken)
+  const category = (await request('POST', '/categories', { name: 'Mecânica' }, headers)).body.category
   const school = (await request('POST', '/schools', { name: 'Escola' }, headers)).body.school
   const tutorial = await request('POST', '/tutorials', { title: 'Robô', description: 'Montagem', categoryId: category.id,
-    difficulty: 'EASY', schoolId: school.id, materialsNeeded: ['Motor'], tutorialUrl: 'https://example.com/tutorial' })
+    difficulty: 'EASY', schoolId: school.id, materialsNeeded: ['Motor'], tutorialUrl: 'https://example.com/tutorial' }, headers)
   assert.equal(tutorial.status, 201)
-  assert.equal((await request('PUT', `/tutorials/${tutorial.body.tutorial.id}`, { title: 'Novo título', materialsNeeded: ['Sensor'] })).body.tutorial.title, 'Novo título')
+  assert.equal((await request('PUT', `/tutorials/${tutorial.body.tutorial.id}`, { title: 'Novo título', materialsNeeded: ['Sensor'] }, headers)).body.tutorial.title, 'Novo título')
   assert.deepEqual((await request('GET', `/tutorials/${tutorial.body.tutorial.id}`)).body.tutorial.materialsNeeded, ['Sensor'])
   assert.equal((await request('GET', '/tutorials')).body.tutorials.length, 1)
   const project = await request('POST', '/projects', { name: 'Projeto', schoolId: school.id }, headers)
   assert.equal(project.status, 201)
   assert.equal((await request('PUT', `/projects/${project.body.project.id}`, { description: 'Projeto atualizado' }, headers)).body.project.description, 'Projeto atualizado')
   assert.equal((await request('DELETE', `/projects/${project.body.project.id}`, undefined, headers)).status, 200)
-  assert.equal((await request('DELETE', `/tutorials/${tutorial.body.tutorial.id}`)).status, 200)
-  assert.equal((await request('PUT', `/categories/${category.id}`, { name: 'Eletrônica' })).body.category.name, 'Eletrônica')
-  assert.equal((await request('DELETE', `/categories/${category.id}`)).status, 200)
+  assert.equal((await request('DELETE', `/tutorials/${tutorial.body.tutorial.id}`, undefined, headers)).status, 200)
+  assert.equal((await request('PUT', `/categories/${category.id}`, { name: 'Eletrônica' }, headers)).body.category.name, 'Eletrônica')
+  assert.equal((await request('DELETE', `/categories/${category.id}`, undefined, headers)).status, 200)
 })
 
+test('categories and tutorials: public reads, protected writes, school-scoped teachers', async t => {
+  const { request, register, createAdmin, db } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const schoolA = (await request('POST', '/schools', { name: 'A' }, admin)).body.school
+  const schoolB = (await request('POST', '/schools', { name: 'B' }, admin)).body.school
+  const category = (await request('POST', '/categories', { name: 'Mecânica' }, admin)).body.category
+  const tutorialBody = schoolId => ({ title: 'Robô', description: 'Montagem', categoryId: category.id,
+    difficulty: 'EASY', schoolId, materialsNeeded: ['Motor'] })
+  // Anonymous: reads allowed, every write is 401.
+  assert.equal((await request('GET', '/categories')).status, 200)
+  assert.equal((await request('POST', '/categories', { name: 'X' })).status, 401)
+  assert.equal((await request('PUT', `/categories/${category.id}`, { name: 'X' })).status, 401)
+  assert.equal((await request('DELETE', `/categories/${category.id}`)).status, 401)
+  assert.equal((await request('POST', '/tutorials', tutorialBody(schoolA.id))).status, 401)
+  // Teacher of school A (onboarded).
+  const registered = await register({ email: 'prof@school.example', schoolId: schoolA.id })
+  const login = await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })
+  const teacher = bearer(login.body.accessToken)
+  assert.equal(db.tables.user.find(u => u.email === 'prof@school.example').schoolId, schoolA.id, String(registered.status))
+  assert.equal((await request('POST', '/categories', { name: 'X' }, teacher)).status, 403)
+  assert.equal((await request('PUT', `/categories/${category.id}`, { name: 'X' }, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/categories/${category.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('POST', '/tutorials', tutorialBody(schoolB.id), teacher)).status, 403)
+  const own = await request('POST', '/tutorials', tutorialBody(schoolA.id), teacher)
+  assert.equal(own.status, 201)
+  const ownId = own.body.tutorial.id
+  assert.equal((await request('PUT', `/tutorials/${ownId}`, { title: 'Novo' }, teacher)).status, 200)
+  assert.equal((await request('PUT', `/tutorials/${ownId}`, { schoolId: schoolB.id }, teacher)).status, 403)
+  const foreign = (await request('POST', '/tutorials', tutorialBody(schoolB.id), admin)).body.tutorial.id
+  assert.equal((await request('PUT', `/tutorials/${foreign}`, { title: 'Hack' }, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/tutorials/${foreign}`, undefined, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/tutorials/${ownId}`, undefined, teacher)).status, 200)
+  assert.equal((await request('DELETE', `/tutorials/${foreign}`, undefined, admin)).status, 200)
+})
 test('Google Strategy verifies audience, domain, email verification, creates and links accounts', async t => {
   let payload = { email: 'google@school.example', sub: 'google-sub', email_verified: true, name: 'Google User' }
   const calls = []
