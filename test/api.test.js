@@ -31,8 +31,17 @@ const bearer = (token) => ({ authorization: `Bearer ${token}` })
 const refreshCookie = (result) => result.headers['set-cookie'].split(';')[0]
 
 test('status, validation and protected endpoints preserve the HTTP contract', async t => {
-  const { request } = await fixture(t)
+  const { request, app } = await fixture(t)
   assert.deepEqual((await request('GET', '/status')).body, { status: 'ok', message: 'API  online' })
+  const docsUi = await app.inject({ method: 'GET', url: '/docs' })
+  assert.equal(docsUi.statusCode, 200)
+  assert.match(docsUi.headers['content-type'], /text\/html/)
+  const spec = await request('GET', '/docs/json')
+  assert.equal(spec.status, 200)
+  assert.equal(spec.body.openapi, '3.0.3')
+  assert.ok(spec.body.paths['/auth/login']?.post?.requestBody)
+  assert.ok(spec.body.paths['/tutorials/{id}']?.put?.requestBody)
+  assert.ok(!spec.body.paths['/docs'])
   assert.equal((await request('POST', '/auth/register', {})).status, 400)
   assert.equal((await request('POST', '/auth/login', { email: 'invalid', password: 'x' })).status, 400)
   assert.equal((await request('GET', '/users')).status, 401)

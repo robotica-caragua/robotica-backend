@@ -131,6 +131,7 @@ Administradores existentes permanecem administradores. Depois de provisionar o p
 | Método | Caminho | Acesso |
 | --- | --- | --- |
 | GET | `/status` | Público |
+| GET | `/docs`, `/docs/json` | Público (Swagger UI / OpenAPI 3.0) |
 | POST | `/auth/register`, `/auth/login`, `/auth/google` | Público |
 | POST | `/auth/refresh`, `/auth/logout` | Refresh token quando aplicável |
 | POST | `/auth/forgot-password`, `/auth/reset-password` | Público/token de recuperação |

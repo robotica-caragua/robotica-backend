@@ -7,13 +7,23 @@ import rateLimit from '@fastify/rate-limit'
 import { createContainer } from './container.js'
 import { errorHandler } from './core/errors/error-handler.js'
 import { registerCrudRoutes } from './core/http/registerCrudRoutes.js'
+import { registerSwagger } from './core/http/swagger.js'
 import { authRoutes } from './modules/auth/routes.js'
 import { userRoutes } from './modules/users/routes.js'
 
 export async function buildApp({ db, config, overrides, logger = false }) {
   const app = Fastify({ logger, routerOptions: { ignoreTrailingSlash: true } })
   await app.register(cors)
-  await app.register(helmet)
+  await registerSwagger(app)
+  await app.register(helmet, {
+    contentSecurityPolicy: {
+      directives: {
+        ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+        'script-src': ["'self'", ...app.swaggerCSP.script],
+        'style-src': ["'self'", 'https:', ...app.swaggerCSP.style],
+      },
+    },
+  })
   await app.register(cookie)
   await app.register(jwt, { secret: config.JWT_ACCESS_SECRET })
   app.setErrorHandler(errorHandler)
