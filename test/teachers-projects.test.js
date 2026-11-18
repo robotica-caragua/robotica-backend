@@ -2,6 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { buildApp } from '../src/app.js'
 import { MemoryDatabase } from './helpers/MemoryDatabase.js'
+import { AdminProvisioner } from '../src/modules/users/AdminProvisioner.js'
 
 const config = { NODE_ENV: 'test', JWT_ACCESS_SECRET: 'test-only-secret-with-at-least-32-characters',
   JWT_ACCESS_EXPIRES_IN: '15m', JWT_REFRESH_EXPIRES_IN_DAYS: 30, GOOGLE_CLIENT_ID: 'test-client',
@@ -20,14 +21,20 @@ async function fixture(t) {
     name: 'Professor', email: 'teacher@school.example', password: 'original-password', ...overrides,
   })
   const login = async (email) => bearer((await request('POST', '/auth/login', { email, password: 'original-password' })).body.accessToken)
-  const admin = bearer((await register({ role: 'ADMIN', email: 'admin@school.example' })).body.accessToken)
+  // Public registration always creates TEACHER; admins are promoted internally.
+  const makeAdmin = async (email) => {
+    await register({ email })
+    await new AdminProvisioner(db).promote(email)
+    return login(email)
+  }
+  const admin = await makeAdmin('admin@school.example')
   const school = (await request('POST', '/schools', { name: 'Escola' }, admin)).body.school
   // Teachers register publicly (status PENDING) and are approved by the admin afterwards.
   const teacher = async (email) => {
     const created = (await register({ email, schoolId: school.id })).body.user
     return { id: created.id, login: () => login(email) }
   }
-  return { request, admin, school, teacher }
+  return { request, admin, school, teacher, makeAdmin }
 }
 
 test('admin lists teachers, filters by status and sees the linked school in the details', async t => {
@@ -35,7 +42,7 @@ test('admin lists teachers, filters by status and sees the linked school in the 
   const first = await teacher('first@school.example')
   const second = await teacher('second@school.example')
   assert.equal((await request('GET', '/users', undefined, admin)).body.users.length, 3)
-  assert.equal((await request('GET', '/users?status=PENDING', undefined, admin)).body.users.length, 2)
+  assert.equal((await request('GET', '/users?status=PENDING', undefined, admin)).body.users.length, 3)
   assert.equal((await request('GET', '/users?status=Indeferido', undefined, admin)).status, 404)
   assert.equal((await request('GET', '/users?status=qualquer', undefined, admin)).status, 400)
 
@@ -43,7 +50,7 @@ test('admin lists teachers, filters by status and sees the linked school in the 
   assert.equal(approved.status, 200)
   assert.equal(approved.body.user.approvalStatus, 'APPROVED')
   assert.equal((await request('PATCH', `/users/${second.id}/approval`, { status: 'INDEFERIDO' }, admin)).body.user.approvalStatus, 'REJECTED')
-  assert.deepEqual((await request('GET', '/users?status=Deferido', undefined, admin)).body.users.map(user => user.role), ['ADMIN', 'TEACHER'])
+  assert.deepEqual((await request('GET', '/users?status=Deferido', undefined, admin)).body.users.map(user => user.role), ['TEACHER'])
   assert.deepEqual((await request('GET', '/users?status=indeferido', undefined, admin)).body.users.map(user => user.id), [second.id])
 
   const details = await request('GET', `/users/${first.id}`, undefined, admin)
@@ -132,9 +139,8 @@ test('projects record owner, media and students, and enforce owner/admin rules',
 })
 
 test('admin without a school must inform schoolId when creating a project', async t => {
-  const { request, school } = await fixture(t)
-  const loose = await request('POST', '/auth/register', { name: 'Admin', email: 'loose@school.example', password: 'original-password', role: 'ADMIN' })
-  const headers = bearer(loose.body.accessToken)
+  const { request, school, makeAdmin } = await fixture(t)
+  const headers = await makeAdmin('loose@school.example')
   const payload = { name: 'Robô', students: ['Ana'] }
   assert.equal((await request('POST', '/projects', payload, headers)).status, 400)
   assert.equal((await request('POST', '/projects', { ...payload, schoolId: school.id }, headers)).status, 201)
