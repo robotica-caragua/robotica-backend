@@ -229,3 +229,33 @@ test('Google Strategy verifies audience, domain, email verification, creates and
   assert.equal(db.tables.user.length, 2)
   assert.equal(db.tables.user[1].googleId, 'linked-id')
 })
+
+test('projects are school-scoped: teachers cannot read or change other schools projects', async t => {
+  const { request, register, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const schoolA = (await request('POST', '/schools', { name: 'A' }, admin)).body.school
+  const schoolB = (await request('POST', '/schools', { name: 'B' }, admin)).body.school
+  const projectA = (await request('POST', '/projects', { name: 'Projeto A', schoolId: schoolA.id }, admin)).body.project
+  const projectB = (await request('POST', '/projects', { name: 'Projeto B', schoolId: schoolB.id }, admin)).body.project
+  await register({ email: 'prof@school.example', schoolId: schoolA.id })
+  const login = await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })
+  const teacher = bearer(login.body.accessToken)
+  // Own school: full access.
+  const own = await request('POST', '/projects', { name: 'Novo', schoolId: schoolA.id }, teacher)
+  assert.equal(own.status, 201)
+  assert.equal((await request('GET', `/projects/${projectA.id}`, undefined, teacher)).status, 200)
+  assert.equal((await request('PUT', `/projects/${projectA.id}`, { name: 'Editado' }, teacher)).status, 200)
+  assert.deepEqual((await request('GET', '/projects', undefined, teacher)).body.projects.map(p => p.schoolId), [schoolA.id, schoolA.id])
+  // Other school: every operation is denied.
+  assert.equal((await request('POST', '/projects', { name: 'X', schoolId: schoolB.id }, teacher)).status, 403)
+  assert.equal((await request('GET', `/projects/${projectB.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('PUT', `/projects/${projectB.id}`, { name: 'Hack' }, teacher)).status, 403)
+  assert.equal((await request('PUT', `/projects/${projectA.id}`, { schoolId: schoolB.id }, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/projects/${projectB.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('GET', '/projects', undefined, admin)).body.projects.length, 3)
+  // Teacher without a school (onboarded only via group) has no project access.
+  const outsider = await register({ email: 'nogroup@school.example' })
+  assert.equal((await request('GET', '/projects', undefined, bearer(outsider.body.accessToken))).status, 403)
+  // Admin keeps full access.
+  assert.equal((await request('DELETE', `/projects/${projectB.id}`, undefined, admin)).status, 200)
+})
