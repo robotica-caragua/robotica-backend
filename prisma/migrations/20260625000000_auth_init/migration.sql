@@ -3,8 +3,10 @@ ALTER TABLE `User`
     ADD COLUMN `authProvider` ENUM('LOCAL', 'GOOGLE') NOT NULL DEFAULT 'LOCAL',
     ADD COLUMN `googleId` VARCHAR(191) NULL,
     ADD COLUMN `onboardingStatus` ENUM('PENDING', 'COMPLETED') NOT NULL DEFAULT 'PENDING',
-    ADD COLUMN `onboardingCompletedAt` DATETIME(3) NULL,
-    ADD UNIQUE INDEX `User_googleId_key`(`googleId`);
+    ADD COLUMN `onboardingCompletedAt` DATETIME(3) NULL;
+
+-- CreateIndex
+CREATE UNIQUE INDEX `User_googleId_key` ON `User`(`googleId`);
 
 -- Backfill onboarding for existing users already associated with the system
 UPDATE `User`
