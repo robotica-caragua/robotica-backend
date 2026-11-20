@@ -9,7 +9,6 @@ export const registerSchema = z.object({
     8,
     'O campo password deve ter ao menos 8 caracteres.',
   ),
-  schoolId: z.number().int().positive('O campo schoolId é inválido.').optional(),
 })
 
 export const loginSchema = z.object({

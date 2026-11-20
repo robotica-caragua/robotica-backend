@@ -124,10 +124,14 @@ test('teacher onboarding checks relations and issues an updated access token', a
   assert.equal((await request('POST', '/auth/onboarding', { schoolId: 999 }, headers)).status, 404)
   assert.equal((await request('POST', '/auth/onboarding', { roboticsGroupId: 999 }, headers)).status, 404)
   const school = await db.school.create({ data: { name: 'Escola' } })
+  const otherSchool = await db.school.create({ data: { name: 'Outra Escola' } })
   const group = await db.roboticsGroup.create({ data: { name: 'Grupo' } })
   const completed = await request('POST', '/auth/onboarding', { schoolId: school.id, roboticsGroupId: group.id }, headers)
   assert.equal(completed.status, 200)
   assert.equal(completed.body.user.onboardingStatus, 'COMPLETED')
+  assert.equal((await request('POST', '/auth/onboarding', { schoolId: otherSchool.id }, headers)).status, 409)
+  assert.equal((await request('POST', '/auth/onboarding', { schoolId: otherSchool.id }, bearer(completed.body.accessToken))).status, 409)
+  assert.equal(db.tables.user[0].schoolId, school.id)
   assert.equal((await request('GET', '/projects', undefined, bearer(completed.body.accessToken))).status, 404)
   assert.equal((await request('GET', '/users', undefined, bearer(completed.body.accessToken))).status, 403)
 })
@@ -188,9 +192,10 @@ test('categories and tutorials: public reads, protected writes, school-scoped te
   assert.equal((await request('DELETE', `/categories/${category.id}`)).status, 401)
   assert.equal((await request('POST', '/tutorials', tutorialBody(schoolA.id))).status, 401)
   // Teacher of school A (onboarded).
-  const registered = await register({ email: 'prof@school.example', schoolId: schoolA.id })
-  const login = await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })
-  const teacher = bearer(login.body.accessToken)
+  const registered = await register({ email: 'prof@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: schoolA.id }, bearer(registered.body.accessToken))
+  assert.equal(onboarded.status, 200)
+  const teacher = bearer(onboarded.body.accessToken)
   assert.equal(db.tables.user.find(u => u.email === 'prof@school.example').schoolId, schoolA.id, String(registered.status))
   assert.equal((await request('POST', '/categories', { name: 'X' }, teacher)).status, 403)
   assert.equal((await request('PUT', `/categories/${category.id}`, { name: 'X' }, teacher)).status, 403)
@@ -237,9 +242,10 @@ test('projects are school-scoped: teachers cannot read or change other schools p
   const schoolB = (await request('POST', '/schools', { name: 'B' }, admin)).body.school
   const projectA = (await request('POST', '/projects', { name: 'Projeto A', schoolId: schoolA.id }, admin)).body.project
   const projectB = (await request('POST', '/projects', { name: 'Projeto B', schoolId: schoolB.id }, admin)).body.project
-  await register({ email: 'prof@school.example', schoolId: schoolA.id })
-  const login = await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })
-  const teacher = bearer(login.body.accessToken)
+  const registered = await register({ email: 'prof@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: schoolA.id }, bearer(registered.body.accessToken))
+  assert.equal(onboarded.status, 200)
+  const teacher = bearer(onboarded.body.accessToken)
   // Own school: full access.
   const own = await request('POST', '/projects', { name: 'Novo', schoolId: schoolA.id }, teacher)
   assert.equal(own.status, 201)

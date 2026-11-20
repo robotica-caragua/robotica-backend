@@ -144,6 +144,7 @@ const customRoutes = {
       401: errorResponse('Token de acesso não informado ou inválido'),
       403: errorResponse('Acesso restrito a professores'),
       404: errorResponse('Escola ou grupo de robótica não encontrado'),
+      409: errorResponse('Onboarding já concluído'),
     },
   },
   'GET /users/:id/school': {
