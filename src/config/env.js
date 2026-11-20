@@ -13,6 +13,11 @@ export function loadConfig(source = process.env) {
     GOOGLE_CLIENT_ID: z.string().optional(),
     GOOGLE_ALLOWED_DOMAIN: z.string().optional(),
     APP_BASE_URL: z.url().default('http://localhost:3000'),
+    // Origens do frontend autorizadas a chamar a API (separadas por vírgula). Nunca use "*": os cookies exigem origens explícitas.
+    CORS_ORIGINS: z.string().default('http://localhost:3000').transform(value => value.split(',')
+      .map(origin => origin.trim().replace(/\/+$/, '')).filter(Boolean))
+      .refine(origins => origins.every(origin => URL.canParse(origin) && /^https?:\/\/[^/]+$/.test(origin)),
+        'CORS_ORIGINS deve conter apenas origens http(s) válidas (ex.: http://localhost:3000), sem "*" nem caminhos.'),
     SMTP_HOST: z.string().optional(),
     SMTP_PORT: z.coerce.number().int().positive().default(587),
     SMTP_USER: z.string().optional(),

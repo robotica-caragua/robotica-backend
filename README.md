@@ -107,6 +107,7 @@ As migrações históricas foram reunidas em ordem, sem exclusão de dados. Na m
 - Refresh tokens ficam em cookie `refreshToken` HttpOnly, SameSite=Lax e Secure em produção. O cabeçalho `Authorization: Refresh TOKEN` também continua aceito. O banco armazena somente hashes e a rotação rejeita reutilização concorrente.
 - Redefinição de senha consome o token e revoga as sessões numa transação. Access tokens já emitidos expiram normalmente, como antes.
 - Google exige `GOOGLE_CLIENT_ID` e `GOOGLE_ALLOWED_DOMAIN`. São necessários HTTPS para os serviços Google usados pela biblioteca e uma conta do domínio. Os testes locais usam um cliente Google substituível e não comprovam acesso a uma conta externa.
+- CORS aceita apenas as origens listadas em `CORS_ORIGINS` (padrão `http://localhost:3000`), com `credentials: true` para o cookie de refresh funcionar com `fetch(..., { credentials: 'include' })`. Em produção, informe a URL real do frontend; `*` é rejeitado na validação.
 - Email usa `SMTP_*`, `MAIL_FROM` e `APP_BASE_URL`. Sem SMTP em desenvolvimento, os links ficam em arquivos privados de `.local/mail/`, em vez de aparecer nos logs. Em produção, a ausência de SMTP retorna 503 para a operação de envio. Nunca versione esses arquivos ou exponha links de redefinição.
 - POSTs de autenticação têm limite de 30 requisições por minuto/IP. Em implantação atrás de proxy, configure a confiança no proxy conforme a infraestrutura, sem confiar indiscriminadamente em cabeçalhos externos.
 

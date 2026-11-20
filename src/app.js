@@ -13,7 +13,13 @@ import { userRoutes } from './modules/users/routes.js'
 
 export async function buildApp({ db, config, overrides, logger = false }) {
   const app = Fastify({ logger, routerOptions: { ignoreTrailingSlash: true } })
-  await app.register(cors)
+  // Só origens explícitas: com credentials, o navegador recusa "Access-Control-Allow-Origin: *".
+  // Sem CORS_ORIGINS configurado, nenhuma origem externa é autorizada.
+  await app.register(cors, {
+    origin: config.CORS_ORIGINS ?? [],
+    credentials: true,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  })
   await registerSwagger(app)
   await app.register(helmet, {
     contentSecurityPolicy: {
