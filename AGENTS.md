@@ -13,7 +13,7 @@ Arquitetura em camadas: rotas → controllers → services → repositories. Dep
 
 ## Estilo de código
 - Simples e direto. Prefira reutilizar o padrão que já existe (ex.: `TutorialService`, `CrudService`) a criar abstrações novas.
-- Não adicione comentários que apenas descrevem o código. Comente só o "porquê" de decisões não óbvias, e em poucas linhas.
+- Não adicione comentários no código.
 - Sem código "esperto": nada de one-liners difíceis de ler, metaprogramação ou helpers genéricos para um único uso.
 - Mudanças pequenas e focadas: não refatore o que não faz parte da tarefa.
 - Mensagens de erro e respostas da API em português, como no restante do projeto.
