@@ -259,3 +259,32 @@ test('projects are school-scoped: teachers cannot read or change other schools p
   // Admin keeps full access.
   assert.equal((await request('DELETE', `/projects/${projectB.id}`, undefined, admin)).status, 200)
 })
+
+test('CORS only allows configured origins and supports cookies and all CRUD methods', async t => {
+  const db = new MemoryDatabase()
+  const app = await buildApp({ db, config: { ...config, CORS_ORIGINS: ['http://frontend.example'] } })
+  t.after(() => app.close())
+  const preflight = (origin, method = 'PUT') => app.inject({ method: 'OPTIONS', url: '/projects/1',
+    headers: { origin, 'access-control-request-method': method, 'access-control-request-headers': 'authorization,content-type' } })
+  const allowed = await preflight('http://frontend.example')
+  assert.equal(allowed.headers['access-control-allow-origin'], 'http://frontend.example')
+  assert.equal(allowed.headers['access-control-allow-credentials'], 'true')
+  assert.match(allowed.headers['access-control-allow-methods'], /PUT/)
+  assert.match((await preflight('http://frontend.example', 'DELETE')).headers['access-control-allow-methods'], /DELETE/)
+  const simple = await app.inject({ method: 'GET', url: '/status', headers: { origin: 'http://frontend.example' } })
+  assert.equal(simple.headers['access-control-allow-origin'], 'http://frontend.example')
+  assert.equal(simple.headers['access-control-allow-credentials'], 'true')
+  const denied = await preflight('http://evil.example')
+  // Sem Allow-Origin o navegador bloqueia a resposta, mesmo que o plugin envie Allow-Credentials.
+  assert.equal(denied.headers['access-control-allow-origin'], undefined)
+})
+
+test('loadConfig validates CORS_ORIGINS and rejects wildcards', async () => {
+  const { loadConfig } = await import('../src/config/env.js')
+  const base = { DATABASE_URL: 'mysql://u:p@127.0.0.1:3306/db', JWT_ACCESS_SECRET: 'x'.repeat(32) }
+  assert.deepEqual(loadConfig(base).CORS_ORIGINS, ['http://localhost:3000'])
+  assert.deepEqual(loadConfig({ ...base, CORS_ORIGINS: 'https://a.example/, https://b.example' }).CORS_ORIGINS,
+    ['https://a.example', 'https://b.example'])
+  assert.throws(() => loadConfig({ ...base, CORS_ORIGINS: '*' }))
+  assert.throws(() => loadConfig({ ...base, CORS_ORIGINS: 'https://a.example/path' }))
+})
