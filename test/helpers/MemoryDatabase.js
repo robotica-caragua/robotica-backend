@@ -20,7 +20,8 @@ export class MemoryDatabase {
         create: async ({ data, ...options }) => {
           if (name === 'user' && rows.some(row => row.email === data.email)) throw Object.assign(new Error('duplicate'), { code: 'P2002' })
           const defaults = name === 'user' ? { role: 'TEACHER', authProvider: 'LOCAL', googleId: null,
-            onboardingStatus: 'PENDING', onboardingCompletedAt: null, schoolId: null, roboticsGroupId: null } : {}
+            onboardingStatus: 'PENDING', onboardingCompletedAt: null, schoolId: null, roboticsGroupId: null }
+            : (name === 'project' || name === 'tutorial') ? { imageUrl: null, images: null } : {}
           const row = { id: Math.max(0, ...rows.map(row => row.id)) + 1, createdAt: new Date(), updatedAt: new Date(),
             revokedAt: null, usedAt: null, ...defaults, ...data }
           rows.push(row)

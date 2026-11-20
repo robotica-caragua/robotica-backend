@@ -294,3 +294,71 @@ test('loadConfig validates CORS_ORIGINS and rejects wildcards', async () => {
   assert.throws(() => loadConfig({ ...base, CORS_ORIGINS: '*' }))
   assert.throws(() => loadConfig({ ...base, CORS_ORIGINS: 'https://a.example/path' }))
 })
+
+test('multi-image upload endpoint and fluid images in projects and tutorials', async t => {
+  const { request, createAdmin, app } = await fixture(t)
+  const samplePng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+  const sampleJpg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]).toString('base64')
+
+  assert.equal((await request('POST', '/uploads/images', { image: samplePng })).status, 401)
+
+  const admin = bearer((await createAdmin()).body.accessToken)
+  assert.equal((await request('POST', '/uploads/images', {}, admin)).status, 400)
+  assert.equal((await request('POST', '/uploads/images', { image: 'data:image/png;base64,aGVsbG8=' }, admin)).status, 400)
+
+  const uploaded = await request('POST', '/uploads/images', { images: [samplePng, sampleJpg] }, admin)
+  assert.equal(uploaded.status, 201)
+  assert.equal(uploaded.body.images.length, 2)
+  assert.equal(uploaded.body.imageUrl, uploaded.body.images[0])
+  assert.match(uploaded.body.imageUrl, /^http:\/\/localhost:3333\/uploads\/[a-f0-9-]+\.png$/)
+
+  const filename = uploaded.body.imageUrl.split('/').pop()
+  const served = await app.inject({ method: 'GET', url: `/uploads/${filename}` })
+  assert.equal(served.statusCode, 200)
+  assert.match(served.headers['content-type'], /image\/png/)
+  assert.equal((await request('GET', '/uploads/invalid..png')).status, 400)
+  assert.equal((await request('GET', '/uploads/00000000-0000-0000-0000-000000000000.png')).status, 404)
+
+  const school = (await request('POST', '/schools', { name: 'Escola' }, admin)).body.school
+  const category = (await request('POST', '/categories', { name: 'Mecânica' }, admin)).body.category
+
+  const project = await request('POST', '/projects', {
+    name: 'Robô Seguidor',
+    description: 'Com fotos',
+    schoolId: school.id,
+    images: [samplePng, sampleJpg],
+  }, admin)
+  assert.equal(project.status, 201)
+  assert.equal(project.body.project.images.length, 2)
+  assert.equal(project.body.project.imageUrl, project.body.project.images[0])
+
+  const projectList = await request('GET', '/projects', undefined, admin)
+  assert.equal(projectList.status, 200)
+  assert.equal(projectList.body.projects[0].imageUrl, project.body.project.imageUrl)
+  assert.deepEqual(projectList.body.projects[0].images, project.body.project.images)
+
+  const updatedProject = await request('PUT', `/projects/${project.body.project.id}`, {
+    images: [project.body.project.images[0], samplePng],
+  }, admin)
+  assert.equal(updatedProject.status, 200)
+  assert.equal(updatedProject.body.project.images.length, 2)
+  assert.equal(updatedProject.body.project.images[0], project.body.project.images[0])
+
+  const tutorial = await request('POST', '/tutorials', {
+    title: 'Montagem do Chassi',
+    description: 'Passo a passo',
+    categoryId: category.id,
+    difficulty: 'EASY',
+    schoolId: school.id,
+    materialsNeeded: ['Chassi', 'Rodas'],
+    images: [samplePng],
+  }, admin)
+  assert.equal(tutorial.status, 201)
+  assert.equal(tutorial.body.tutorial.images.length, 1)
+  assert.equal(tutorial.body.tutorial.imageUrl, tutorial.body.tutorial.images[0])
+
+  const tutorialList = await request('GET', '/tutorials')
+  assert.equal(tutorialList.status, 200)
+  assert.equal(tutorialList.body.tutorials[0].imageUrl, tutorial.body.tutorial.imageUrl)
+  assert.deepEqual(tutorialList.body.tutorials[0].images, tutorial.body.tutorial.images)
+})
