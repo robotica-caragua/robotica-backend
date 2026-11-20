@@ -379,3 +379,18 @@ test('resolvePoolConfig parses MySQL/MariaDB URLs and SSL parameters for cloud d
 
   assert.throws(() => resolvePoolConfig('postgres://user:pass@localhost:5432/db'))
 })
+
+test('TokenService uses SameSite=None and Secure for refresh cookie in production', async t => {
+  const db = new MemoryDatabase()
+  const app = await buildApp({ db, config: { ...config, NODE_ENV: 'production' } })
+  t.after(() => app.close())
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: { name: 'Prod User', email: 'prod@school.example', password: 'valid-password' },
+  })
+  assert.equal(response.statusCode, 201)
+  assert.match(response.headers['set-cookie'], /SameSite=None/)
+  assert.match(response.headers['set-cookie'], /Secure/)
+  assert.match(response.headers['set-cookie'], /HttpOnly/)
+})
