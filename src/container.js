@@ -16,6 +16,8 @@ import { LocalAuthenticationStrategy } from './modules/auth/strategies/LocalAuth
 import { GoogleAuthenticationStrategy } from './modules/auth/strategies/GoogleAuthenticationStrategy.js'
 import { TutorialService } from './modules/tutorials/TutorialService.js'
 import { TutorialController } from './modules/tutorials/TutorialController.js'
+import { ProjectService } from './modules/projects/ProjectService.js'
+import { ProjectController } from './modules/projects/ProjectController.js'
 import { resourceDefinitions } from './modules/resources.js'
 
 // Composition root: dependencies are wired here, never inside controllers.
@@ -30,10 +32,12 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     repositories[name] = repository
     const service = name === 'users' ? new UserService(repository, definition, passwords)
       : name === 'tutorials' ? new TutorialService(repository, definition, users)
-        : new CrudService(repository, definition)
+        : name === 'projects' ? new ProjectService(repository, definition, users)
+          : new CrudService(repository, definition)
     controllers[name] = name === 'users' ? new UserController(service, definition)
       : name === 'tutorials' ? new TutorialController(service, definition)
-        : new CrudController(service, definition)
+        : name === 'projects' ? new ProjectController(service, definition)
+          : new CrudController(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],
