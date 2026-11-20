@@ -362,3 +362,20 @@ test('multi-image upload endpoint and fluid images in projects and tutorials', a
   assert.equal(tutorialList.body.tutorials[0].imageUrl, tutorial.body.tutorial.imageUrl)
   assert.deepEqual(tutorialList.body.tutorials[0].images, tutorial.body.tutorial.images)
 })
+
+test('resolvePoolConfig parses MySQL/MariaDB URLs and SSL parameters for cloud databases', async () => {
+  const { resolvePoolConfig } = await import('../src/core/database/prisma.js')
+  const local = resolvePoolConfig('mysql://root:secret@127.0.0.1:3306/robotica')
+  assert.equal(local.host, '127.0.0.1')
+  assert.equal(local.port, 3306)
+  assert.equal(local.ssl, undefined)
+
+  const tidb = resolvePoolConfig('mysql://user:pass@gateway01.prod.aws.tidbcloud.com:4000/test?sslaccept=strict')
+  assert.equal(tidb.port, 4000)
+  assert.deepEqual(tidb.ssl, { rejectUnauthorized: true })
+
+  const aiven = resolvePoolConfig('mysql://avnadmin:pass@mysql-demo.aivencloud.com:12345/defaultdb?ssl-mode=REQUIRED')
+  assert.deepEqual(aiven.ssl, { rejectUnauthorized: false })
+
+  assert.throws(() => resolvePoolConfig('postgres://user:pass@localhost:5432/db'))
+})
