@@ -2,6 +2,7 @@ import swagger from '@fastify/swagger'
 import swaggerUi from '@fastify/swagger-ui'
 import { z } from 'zod'
 import * as authSchemas from '../../modules/auth/schemas.js'
+import { uploadImagesSchema } from '../../modules/uploads/schemas.js'
 import { resourceDefinitions } from '../../modules/resources.js'
 
 function fromZod(zodSchema) {
@@ -160,6 +161,33 @@ const customRoutes = {
       404: errorResponse('Usuário ou escola não encontrada'),
     },
   },
+  'POST /uploads/images': {
+    tags: ['Uploads'],
+    summary: 'Envia uma ou várias imagens (Data URL Base64 ou URL) para o Cloudinary ou armazenamento local',
+    security: bearerSecurity,
+    body: fromZod(uploadImagesSchema),
+    response: {
+      201: { description: 'Imagens enviadas com sucesso', type: 'object', additionalProperties: true },
+      400: errorResponse('Formato ou tamanho de imagem inválido'),
+      401: errorResponse('Não autenticado'),
+      403: errorResponse('Onboarding pendente'),
+      502: errorResponse('Falha no serviço de armazenamento'),
+    },
+  },
+  'GET /uploads/:filename': {
+    tags: ['Uploads'],
+    summary: 'Retorna imagem armazenada localmente em ambiente de desenvolvimento',
+    params: {
+      type: 'object',
+      required: ['filename'],
+      properties: { filename: { type: 'string' } },
+    },
+    response: {
+      200: { description: 'Arquivo binário da imagem', type: 'string' },
+      400: errorResponse('Nome de arquivo inválido'),
+      404: errorResponse('Imagem não encontrada'),
+    },
+  },
 }
 
 function buildCrudSchema(method, url) {
@@ -267,6 +295,7 @@ export async function registerSwagger(app) {
         { name: 'Categories', description: 'Categorias de tutoriais (leitura pública, escrita ADMIN)' },
         { name: 'Tutorials', description: 'Tutoriais (leitura pública, escrita ADMIN ou TEACHER da escola)' },
         { name: 'Projects', description: 'Projetos de robótica (usuários autenticados com onboarding concluído)' },
+        { name: 'Uploads', description: 'Upload e entrega de imagens de projetos e tutoriais' },
       ],
       components: {
         securitySchemes: {

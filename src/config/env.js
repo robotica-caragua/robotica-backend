@@ -23,5 +23,9 @@ export function loadConfig(source = process.env) {
     SMTP_USER: z.string().optional(),
     SMTP_PASSWORD: z.string().optional(),
     MAIL_FROM: z.string().default('no-reply@robotica.local'),
+    CLOUDINARY_CLOUD_NAME: z.string().trim().optional(),
+    CLOUDINARY_API_KEY: z.string().trim().optional(),
+    CLOUDINARY_API_SECRET: z.string().trim().optional(),
+    CLOUDINARY_FOLDER: z.string().trim().default('robotica'),
   }).parse(source)
 }

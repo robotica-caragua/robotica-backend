@@ -3,7 +3,11 @@ import { AppError } from '../../core/errors/AppError.js'
 
 // Admins manage every project; teachers only those of their own school.
 export class ProjectService extends CrudService {
-  constructor(repository, definition, users) { super(repository, definition); this.users = users }
+  constructor(repository, definition, users, uploads) {
+    super(repository, definition)
+    this.users = users
+    this.uploads = uploads
+  }
 
   // Returns the school a teacher is bound to, or null for admins (unrestricted).
   // The school is read from the database, not the JWT, so changes apply immediately.
@@ -36,14 +40,16 @@ export class ProjectService extends CrudService {
 
   async createAs(actor, data) {
     this.assertSameSchool(await this.scopeOf(actor), data.schoolId)
-    return this.create(data)
+    const payload = this.uploads ? await this.uploads.normalizeMediaFields(data) : data
+    return this.create(payload)
   }
 
   async updateAs(actor, id, data) {
     const scope = await this.scopeOf(actor)
     this.assertSameSchool(scope, (await this.get(id)).schoolId)
     if (data.schoolId !== undefined) this.assertSameSchool(scope, data.schoolId)
-    return this.repository.update(id, data)
+    const payload = this.uploads ? await this.uploads.normalizeMediaFields(data) : data
+    return this.repository.update(id, payload)
   }
 
   async deleteAs(actor, id) {

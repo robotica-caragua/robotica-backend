@@ -3,7 +3,11 @@ import { AppError } from '../../core/errors/AppError.js'
 
 // Admins manage every tutorial; teachers only those of their own school.
 export class TutorialService extends CrudService {
-  constructor(repository, definition, users) { super(repository, definition); this.users = users }
+  constructor(repository, definition, users, uploads) {
+    super(repository, definition)
+    this.users = users
+    this.uploads = uploads
+  }
 
   async assertCanManage(actor, schoolId) {
     if (actor.role === 'ADMIN') return
@@ -15,14 +19,16 @@ export class TutorialService extends CrudService {
 
   async createAs(actor, data) {
     await this.assertCanManage(actor, data.schoolId)
-    return this.create(data)
+    const payload = this.uploads ? await this.uploads.normalizeMediaFields(data) : data
+    return this.create(payload)
   }
 
   async updateAs(actor, id, data) {
     const current = await this.get(id)
     await this.assertCanManage(actor, current.schoolId)
     if (data.schoolId !== undefined) await this.assertCanManage(actor, data.schoolId)
-    return this.repository.update(id, data)
+    const payload = this.uploads ? await this.uploads.normalizeMediaFields(data) : data
+    return this.repository.update(id, payload)
   }
 
   async deleteAs(actor, id) {

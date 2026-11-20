@@ -10,9 +10,14 @@ import { registerCrudRoutes } from './core/http/registerCrudRoutes.js'
 import { registerSwagger } from './core/http/swagger.js'
 import { authRoutes } from './modules/auth/routes.js'
 import { userRoutes } from './modules/users/routes.js'
+import { uploadRoutes } from './modules/uploads/routes.js'
 
 export async function buildApp({ db, config, overrides, logger = false }) {
-  const app = Fastify({ logger, routerOptions: { ignoreTrailingSlash: true } })
+  const app = Fastify({
+    logger,
+    bodyLimit: 50 * 1024 * 1024,
+    routerOptions: { ignoreTrailingSlash: true },
+  })
   // Só origens explícitas: com credentials, o navegador recusa "Access-Control-Allow-Origin: *".
   // Sem CORS_ORIGINS configurado, nenhuma origem externa é autorizada.
   await app.register(cors, {
@@ -22,6 +27,7 @@ export async function buildApp({ db, config, overrides, logger = false }) {
   })
   await registerSwagger(app)
   await app.register(helmet, {
+    crossOriginResourcePolicy: { policy: 'cross-origin' },
     contentSecurityPolicy: {
       directives: {
         ...helmet.contentSecurityPolicy.getDefaultDirectives(),
@@ -45,6 +51,7 @@ export async function buildApp({ db, config, overrides, logger = false }) {
   await app.register(rateLimit, { global: false, max: 30, timeWindow: '1 minute' })
   authRoutes(app, container.auth, container.policy)
   userRoutes(app, container.controllers.users, container.policy)
+  uploadRoutes(app, container.uploads, container.policy)
   const admin = [container.policy.authenticate, container.policy.completed, container.policy.role('ADMIN')]
   registerCrudRoutes(app, '/schools', container.controllers.schools, admin)
   // Reads stay public; writes require auth. Categories: ADMIN only. Tutorials: ADMIN or same-school teacher.

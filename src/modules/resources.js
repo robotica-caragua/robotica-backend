@@ -24,12 +24,12 @@ export const resourceDefinitions = {
   schools: definition('school', 'schools', 'escola', schools, 'Escola', 'f', 'Não foi encontrada nenhuma escola!',
     { id: true, name: true, address: true, ...timestamps }),
   projects: definition('project', 'projects', 'projeto', projects, 'Projeto', 'm', 'Não foi encontrado nenhum projeto!',
-    { id: true, name: true, description: true, schoolId: true, school: true, ...timestamps }),
+    { id: true, name: true, description: true, schoolId: true, school: true, imageUrl: true, images: true, ...timestamps }),
   categories: definition('category', 'categories', 'categoria', categories, 'Categoria', 'f', 'Não foi encontrada nenhuma categoria!',
     { id: true, name: true }),
   tutorials: definition('tutorial', 'tutorials', 'tutorial', tutorials, 'Tutorial', 'm', 'Não foi encontrado nenhum tutorial!',
     { id: true, title: true, description: true, categoryId: true, category: true, difficulty: true,
-      schoolId: true, school: true, materialsNeeded: true, tutorialUrl: true, ...timestamps }),
+      schoolId: true, school: true, materialsNeeded: true, tutorialUrl: true, imageUrl: true, images: true, ...timestamps }),
 }
 Object.assign(resourceDefinitions.users.messages, { list: 'Usuários encontrados com sucesso!' })
 Object.assign(resourceDefinitions.schools.messages, { list: 'Escolas encontradas com sucesso!' })
