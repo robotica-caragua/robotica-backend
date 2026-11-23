@@ -6,11 +6,11 @@ API em **JavaScript ESM, Fastify 5 e Prisma 7**, implementada na branch `refacto
 
 Nenhuma das branches anteriores continha todas as funcionalidades:
 
-| Branch de referência | Commit consultado | Conteúdo utilizado                                                                          |
-| -------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
-| `develop`            | `cee6b44`         | Login local/Google, sessões, recuperação de senha, onboarding, autorização                  |
-| `joao`               | `dbe2248`         | CRUDs de usuários, escolas, projetos, categorias e tutoriais; consulta da escola do usuário |
-| `refactor`           | `6f7efe0`         | Base JavaScript/Fastify, estrutura modular e dependências                                   |
+| Branch de referência | Commit consultado | Conteúdo utilizado |
+| --- | --- | --- |
+| `develop` | `cee6b44` | Login local/Google, sessões, recuperação de senha, onboarding, autorização |
+| `joao` | `dbe2248` | CRUDs de usuários, escolas, projetos, categorias e tutoriais; consulta da escola do usuário |
+| `refactor` | `6f7efe0` | Base JavaScript/Fastify, estrutura modular e dependências |
 
 As URLs e os envelopes de resposta foram mantidos, por exemplo `{ message, user }`, `{ message, users }` e `{ message, accessToken, session }`. Usuários/escolas continuam restritos a administradores, conforme `develop`; categorias/tutoriais mantêm o acesso público da `joao`. Projetos agora têm rotas registradas e exigem autenticação e onboarding concluído.
 
@@ -45,11 +45,8 @@ flowchart LR
 
 ```js
 const strategies = new Map([
-  ["local", new LocalAuthenticationStrategy(users, passwords)],
-  [
-    "google",
-    new GoogleAuthenticationStrategy(users, passwords, googleClient, config),
-  ],
+  ['local', new LocalAuthenticationStrategy(users, passwords)],
+  ['google', new GoogleAuthenticationStrategy(users, passwords, googleClient, config)],
 ])
 ```
 
@@ -92,11 +89,8 @@ Configure `DATABASE_URL` para um banco MySQL/MariaDB e preencha `JWT_ACCESS_SECR
 npm run db:generate
 npm run db:migrate
 npm run db:status
-npm run db:seed
 npm run dev
 ```
-
-`npm run db:seed` é idempotente e cria dados locais para teste. O usuário demo é `demo@robotica.local` com a senha `Demo@123456`; não use essas credenciais fora do ambiente local.
 
 `npm start` inicia sem watch; `GET /status` deve responder `{"status":"ok","message":"API  online"}`. O servidor conecta ao banco antes de aceitar requisições e encerra suas conexões em SIGINT/SIGTERM. Dependências instaladas e dados em disco podem ser retidos, mas os processos precisam ser iniciados novamente em cada ambiente.
 
@@ -116,25 +110,40 @@ As migrações históricas foram reunidas em ordem, sem exclusão de dados. Na m
 - Email usa `SMTP_*`, `MAIL_FROM` e `APP_BASE_URL`. Sem SMTP em desenvolvimento, os links ficam em arquivos privados de `.local/mail/`, em vez de aparecer nos logs. Em produção, a ausência de SMTP retorna 503 para a operação de envio. Nunca versione esses arquivos ou exponha links de redefinição.
 - POSTs de autenticação têm limite de 30 requisições por minuto/IP. Em implantação atrás de proxy, configure a confiança no proxy conforme a infraestrutura, sem confiar indiscriminadamente em cabeçalhos externos.
 
-**Regra herdada a revisar antes de produção:** `/auth/register` continua aceitando `role: ADMIN`, como a `develop`. Portanto, cadastro público pode criar administradores. Isso foi mantido para compatibilidade, não deve ser interpretado como um modelo seguro de provisionamento de administradores. Categorias/tutoriais públicos também refletem a branch original.
+### Criar a primeira conta administradora
+
+O cadastro público em `/auth/register` cria sempre `TEACHER`. Enviar `role: ADMIN` não concede privilégios: o campo é ignorado pelo schema e o serviço fixa o perfil, mesmo se chamado sem o validador HTTP.
+
+1. Cadastre a conta normalmente, com email e senha próprios.
+2. Na máquina de um responsável com acesso ao banco, confira se `DATABASE_URL` aponta para o banco correto e execute:
+
+```bash
+npm run admin:promote -- seu-email@exemplo.com
+```
+
+O comando interno promove somente uma conta existente, conclui seu onboarding e revoga seus refresh tokens. Não cria conta, não define senha padrão e não expõe uma rota pública. A mesma senha continua válida. Faça login novamente para obter um token com perfil `ADMIN`; tokens anteriores não ganham novos privilégios.
+
+Administradores existentes permanecem administradores. Depois de provisionar o primeiro, um administrador autenticado também pode gerenciar perfis pelas rotas protegidas de usuários. Restrinja acesso ao servidor e às credenciais do banco a responsáveis autorizados. Categorias e tutoriais continuam públicos conforme a branch original.
+
 
 ## Rotas
 
-| Método         | Caminho                                         | Acesso                               |
-| -------------- | ----------------------------------------------- | ------------------------------------ |
-| GET            | `/status`                                       | Público                              |
-| POST           | `/auth/register`, `/auth/login`, `/auth/google` | Público                              |
-| POST           | `/auth/refresh`, `/auth/logout`                 | Refresh token quando aplicável       |
-| POST           | `/auth/forgot-password`, `/auth/reset-password` | Público/token de recuperação         |
-| GET            | `/auth/me`                                      | Bearer                               |
-| POST           | `/auth/onboarding`                              | Professor autenticado                |
-| GET/POST       | `/users`, `/schools`                            | Admin                                |
-| GET/PUT/DELETE | `/users/:id`, `/schools/:id`                    | Admin                                |
-| GET            | `/users/:id/school`                             | Admin                                |
-| GET/POST       | `/projects`                                     | Autenticado com onboarding concluído |
-| GET/PUT/DELETE | `/projects/:id`                                 | Autenticado com onboarding concluído |
-| GET/POST       | `/categories`, `/tutorials`                     | Público, como na `joao`              |
-| GET/PUT/DELETE | `/categories/:id`, `/tutorials/:id`             | Público, como na `joao`              |
+| Método | Caminho | Acesso |
+| --- | --- | --- |
+| GET | `/status` | Público |
+| GET | `/docs`, `/docs/json` | Público (Swagger UI / OpenAPI 3.0) |
+| POST | `/auth/register`, `/auth/login`, `/auth/google` | Público |
+| POST | `/auth/refresh`, `/auth/logout` | Refresh token quando aplicável |
+| POST | `/auth/forgot-password`, `/auth/reset-password` | Público/token de recuperação |
+| GET | `/auth/me` | Bearer |
+| POST | `/auth/onboarding` | Professor autenticado |
+| GET/POST | `/users`, `/schools` | Admin |
+| GET/PUT/DELETE | `/users/:id`, `/schools/:id` | Admin |
+| GET | `/users/:id/school` | Admin |
+| GET/POST | `/projects` | Autenticado com onboarding concluído |
+| GET/PUT/DELETE | `/projects/:id` | Autenticado com onboarding concluído |
+| GET/POST | `/categories`, `/tutorials` | Público, como na `joao` |
+| GET/PUT/DELETE | `/categories/:id`, `/tutorials/:id` | Público, como na `joao` |
 
 ## Validação
 

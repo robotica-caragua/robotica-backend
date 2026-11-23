@@ -4,11 +4,19 @@ import { AppError } from '../../core/errors/AppError.js'
 
 export class UserService extends CrudService {
   constructor(repository, definition, passwords) { super(repository, definition); this.passwords = passwords }
-  public(record) { return Object.fromEntries(Object.keys(publicUserSelect).map(key => [key, record[key]])) }
+  public(record) {
+    const base = Object.fromEntries(Object.keys(publicUserSelect).map(key => [key, record[key] ?? null]))
+    return {
+      ...base,
+      schools: Array.isArray(record.schools) ? record.schools : [],
+      perfil: record.role === 'ADMIN' ? 'ADMINISTRADOR' : 'PROFESSOR',
+      permissaoAdministrador: record.role === 'ADMIN',
+    }
+  }
   async list() { return (await super.list()).map(record => this.public(record)) }
   async get(id) { return this.public(await super.get(id)) }
   async create(data) {
-    const completed = data.role === 'ADMIN' || Boolean(data.schoolId)
+    const completed = data.role === 'ADMIN' || Boolean(data.schoolId) || Boolean(data.schoolIds?.length)
     return this.public(await this.repository.create({ ...data, password: await this.passwords.hash(data.password),
       onboardingStatus: completed ? 'COMPLETED' : 'PENDING', onboardingCompletedAt: completed ? new Date() : null }))
   }
@@ -21,8 +29,11 @@ export class UserService extends CrudService {
   async school(id) {
     const record = await this.repository.findSchool(id)
     if (!record) throw new AppError(404, 'Usuário não encontrado.')
-    if (!record.schoolId) throw new AppError(404, 'Escola do usuário não encontrada.')
-    if (!record.school) throw new AppError(404, 'Escola não encontrada.')
-    return record.school
+    const schools = Array.isArray(record.schools) ? [...record.schools] : []
+    if (record.school && !schools.some(s => s.id === record.school.id)) schools.unshift(record.school)
+    const primary = record.school || schools[0] || null
+    if (!record.schoolId && !primary) throw new AppError(404, 'Escola do usuário não encontrada.')
+    if (!primary) throw new AppError(404, 'Escola não encontrada.')
+    return { primary, schools }
   }
 }

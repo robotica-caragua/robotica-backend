@@ -1,12 +1,6 @@
 import { z } from 'zod'
-const UserRole = { ADMIN: 'ADMIN', TEACHER: 'TEACHER' }
 
 const requiredString = (message) => z.string().trim().min(1, message)
-
-const roleSchema = z.preprocess(
-  (value) => (typeof value === 'string' ? value.trim().toUpperCase() : value),
-  z.nativeEnum(UserRole, { error: 'O campo role é inválido.' }),
-)
 
 export const registerSchema = z.object({
   name: requiredString('O campo name é obrigatório.'),
@@ -15,8 +9,8 @@ export const registerSchema = z.object({
     8,
     'O campo password deve ter ao menos 8 caracteres.',
   ),
-  role: roleSchema.optional(),
   schoolId: z.number().int().positive('O campo schoolId é inválido.').optional(),
+  schoolIds: z.array(z.number().int().positive('O campo schoolIds é inválido.')).optional(),
 })
 
 export const loginSchema = z.object({
@@ -43,9 +37,10 @@ export const googleLoginSchema = z.object({
 export const completeOnboardingSchema = z
   .object({
     schoolId: z.number().int().positive('O campo schoolId é inválido.').optional(),
+    schoolIds: z.array(z.number().int().positive('O campo schoolIds é inválido.')).optional(),
     roboticsGroupId: z.number().int().positive('O campo roboticsGroupId é inválido.').optional(),
   })
   .refine(
-    (data) => Boolean(data.schoolId) || Boolean(data.roboticsGroupId),
+    (data) => Boolean(data.schoolId) || Boolean(data.schoolIds?.length) || Boolean(data.roboticsGroupId),
     'Informe schoolId ou roboticsGroupId.',
   )

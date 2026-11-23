@@ -14,7 +14,11 @@ import { TokenService } from './modules/auth/TokenService.js'
 import { PasswordResetMailer } from './modules/auth/PasswordResetMailer.js'
 import { LocalAuthenticationStrategy } from './modules/auth/strategies/LocalAuthenticationStrategy.js'
 import { GoogleAuthenticationStrategy } from './modules/auth/strategies/GoogleAuthenticationStrategy.js'
+import { TutorialService } from './modules/tutorials/TutorialService.js'
+import { TutorialController } from './modules/tutorials/TutorialController.js'
 import { resourceDefinitions } from './modules/resources.js'
+import { AnnouncementService } from './modules/announcements/AnnouncementService.js'
+import { AnnouncementController } from './modules/announcements/AnnouncementController.js'
 
 class SchoolRepository extends PrismaRepository {
   constructor(db, select) {
@@ -23,6 +27,7 @@ class SchoolRepository extends PrismaRepository {
   }
   async delete(id) {
     await this.db.user.updateMany({ where: { schoolId: id }, data: { schoolId: null } })
+    await this.db.event?.updateMany?.({ where: { schoolId: id }, data: { schoolId: null } })
     await this.db.project.deleteMany({ where: { schoolId: id } })
     await this.db.tutorial.deleteMany({ where: { schoolId: id } })
     return super.delete(id)
@@ -40,10 +45,14 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
   for (const [name, definition] of Object.entries(resourceDefinitions)) {
     const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)
     repositories[name] = repository
-    const service = name === 'users'
-      ? new UserService(repository, definition, passwords) : new CrudService(repository, definition)
-    controllers[name] = name === 'users'
-      ? new UserController(service, definition) : new CrudController(service, definition)
+    const service = name === 'users' ? new UserService(repository, definition, passwords)
+      : name === 'tutorials' || name === 'projects' ? new TutorialService(repository, definition, users)
+        : name === 'announcements' ? new AnnouncementService(repository, definition)
+          : new CrudService(repository, definition)
+    controllers[name] = name === 'users' ? new UserController(service, definition)
+      : name === 'tutorials' || name === 'projects' ? new TutorialController(service, definition)
+        : name === 'announcements' ? new AnnouncementController(service, definition)
+          : new CrudController(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],
@@ -56,3 +65,4 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     mailer: overrides.mailer || new PasswordResetMailer(config), config })
   return { controllers, auth: new AuthController(authService, tokens), policy: new AccessPolicy(tokens) }
 }
+

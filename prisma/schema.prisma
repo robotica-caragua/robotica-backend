@@ -26,6 +26,7 @@ model User {
   name                  String
   email                 String                  @unique
   password              String
+  matricula             String?
   role                  UserRole                @default(TEACHER)
   authProvider          AuthProvider            @default(LOCAL)
   googleId              String?                 @unique
@@ -33,9 +34,10 @@ model User {
   onboardingCompletedAt DateTime?
 
   schoolId            Int?
-  school              School?                 @relation(fields: [schoolId], references: [id])
+  school              School?              @relation("UserPrimarySchool", fields: [schoolId], references: [id])
+  schools             School[]             @relation("UserSchools")
   roboticsGroupId     Int?
-  roboticsGroup       RoboticsGroup?          @relation(fields: [roboticsGroupId], references: [id])
+  roboticsGroup       RoboticsGroup?       @relation(fields: [roboticsGroupId], references: [id])
   authSessions        AuthSession[]
   passwordResetTokens PasswordResetToken[]
 
@@ -44,21 +46,51 @@ model User {
 }
 
 model School {
-  id        Int        @id @default(autoincrement())
-  name      String
-  address   String?
-  users     User[]
-  projects  Project[]
-  tutorials Tutorial[]
+  id          Int        @id @default(autoincrement())
+  name        String
+  address     String?
+  description String?    @db.Text
+  users       User[]     @relation("UserPrimarySchool")
+  linkedUsers User[]     @relation("UserSchools")
+  projects    Project[]
+  tutorials   Tutorial[]
+  events      Event[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
 
-model RoboticsGroup {
+model Event {
+  id           Int      @id @default(autoincrement())
+  title        String
+  type         String   @default("torneio")
+  description  String?  @db.Text
+  date         String
+  time         String?
+  location     String
+  registration String   @default("abertas")
+  status       String   @default("agendado")
+  agenda       Json?
+  documents    Json?
+  schoolId     Int?
+  school       School?  @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Announcement {
   id        Int      @id @default(autoincrement())
-  name      String   @unique
-  users     User[]
+  title     String
+  message   String   @db.Text
+  authorId  Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model RoboticsGroup {
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  users User[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -100,30 +132,31 @@ model Category {
   name      String
   tutorials Tutorial[]
 }
-model AuthSession {
-  id                Int      @id @default(autoincrement())
-  userId            Int
-  refreshTokenHash   String   @unique
-  expiresAt         DateTime
-  revokedAt         DateTime?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+model AuthSession {
+  id               Int       @id @default(autoincrement())
+  userId           Int
+  refreshTokenHash String    @unique
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])
 }
 
 model PasswordResetToken {
-  id                Int      @id @default(autoincrement())
-  userId            Int
-  tokenHash         String   @unique
-  expiresAt         DateTime
-  usedAt            DateTime?
-  createdAt         DateTime @default(now())
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
 
-  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([expiresAt])

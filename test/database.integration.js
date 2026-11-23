@@ -1,3 +1,4 @@
+import { AdminProvisioner } from '../src/modules/users/AdminProvisioner.js'
 import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { randomUUID } from 'node:crypto'
@@ -21,25 +22,28 @@ test('Prisma/MariaDB: authentication, relations, constraints and token transacti
     return { status: response.statusCode, body: response.json(), headers: response.headers }
   }
   try {
-    const admin = await request('POST', '/auth/register', { name: 'Test admin', email: `${suffix}@test.example`, password: 'integration-password', role: 'ADMIN' })
+    let admin = await request('POST', '/auth/register', { name: 'Test admin', email: `${suffix}@test.example`, password: 'integration-password' })
     assert.equal(admin.status, 201)
     ids.users.push(admin.body.user.id)
+    await new AdminProvisioner(db).promote(`${suffix}@test.example`)
+    admin = await request('POST', '/auth/login', { email: `${suffix}@test.example`, password: 'integration-password' })
+    assert.equal(admin.status, 200)
     const headers = { authorization: `Bearer ${admin.body.accessToken}` }
     const school = await request('POST', '/schools', { name: `Test ${suffix}` }, headers)
     assert.equal(school.status, 201)
     ids.school = school.body.school.id
     const invalid = await request('POST', '/users', { name: 'Invalid FK', email: `invalid-${suffix}@test.example`, password: 'integration-password', schoolId: 2147483647 }, headers)
     assert.equal(invalid.status, 400)
-    const category = await request('POST', '/categories', { name: `Test ${suffix}` })
+    const category = await request('POST', '/categories', { name: `Test ${suffix}` }, headers)
     assert.equal(category.status, 201)
     ids.category = category.body.category.id
     const tutorial = await request('POST', '/tutorials', { title: 'Test robot', description: 'Test', categoryId: ids.category,
-      schoolId: ids.school, difficulty: 'EASY', materialsNeeded: ['Motor'] })
+      schoolId: ids.school, difficulty: 'EASY', materialsNeeded: ['Motor'] }, headers)
     assert.equal(tutorial.status, 201)
     ids.tutorial = tutorial.body.tutorial.id
     assert.deepEqual(tutorial.body.tutorial.materialsNeeded, ['Motor'])
-    assert.equal((await request('PUT', `/tutorials/${ids.tutorial}`, { title: 'Updated' })).body.tutorial.title, 'Updated')
-    assert.equal((await request('DELETE', `/categories/${ids.category}`)).status, 400)
+    assert.equal((await request('PUT', `/tutorials/${ids.tutorial}`, { title: 'Updated' }, headers)).body.tutorial.title, 'Updated')
+    assert.equal((await request('DELETE', `/categories/${ids.category}`, undefined, headers)).status, 400)
     const project = await request('POST', '/projects', { name: 'Test project', schoolId: ids.school }, headers)
     assert.equal(project.status, 201)
     ids.project = project.body.project.id
