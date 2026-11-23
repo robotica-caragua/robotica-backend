@@ -6,6 +6,7 @@ export class MemoryDatabase {
       const rows = this.tables[name] = []
       const matches = (row, where = {}) => Object.entries(where).every(([key, value]) => {
         if (value && typeof value === 'object' && 'gt' in value) return row[key] > value.gt
+        if (value && typeof value === 'object' && Array.isArray(value.in)) return value.in.includes(row[key])
         return row[key] === value
       })
       const linkedSchools = row => {
@@ -33,7 +34,8 @@ export class MemoryDatabase {
         create: async ({ data, ...options }) => {
           if (name === 'user' && rows.some(row => row.email === data.email)) throw Object.assign(new Error('duplicate'), { code: 'P2002' })
           const defaults = name === 'user' ? { role: 'TEACHER', authProvider: 'LOCAL', googleId: null,
-            matricula: null, onboardingStatus: 'PENDING', onboardingCompletedAt: null, schoolId: null, roboticsGroupId: null } : {}
+            matricula: null, onboardingStatus: 'PENDING', onboardingCompletedAt: null, schoolId: null, roboticsGroupId: null }
+            : (name === 'project' || name === 'tutorial') ? { imageUrl: null, images: null } : {}
           const row = { id: Math.max(0, ...rows.map(row => row.id)) + 1, createdAt: new Date(), updatedAt: new Date(),
             revokedAt: null, usedAt: null, ...defaults }
           applyRelations(row, data)

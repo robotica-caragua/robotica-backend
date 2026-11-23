@@ -16,6 +16,12 @@ import { LocalAuthenticationStrategy } from './modules/auth/strategies/LocalAuth
 import { GoogleAuthenticationStrategy } from './modules/auth/strategies/GoogleAuthenticationStrategy.js'
 import { TutorialService } from './modules/tutorials/TutorialService.js'
 import { TutorialController } from './modules/tutorials/TutorialController.js'
+import { ProjectService } from './modules/projects/ProjectService.js'
+import { ProjectController } from './modules/projects/ProjectController.js'
+import { CloudinaryStorageStrategy } from './modules/uploads/strategies/CloudinaryStorageStrategy.js'
+import { LocalStorageStrategy } from './modules/uploads/strategies/LocalStorageStrategy.js'
+import { UploadService } from './modules/uploads/UploadService.js'
+import { UploadController } from './modules/uploads/UploadController.js'
 import { resourceDefinitions } from './modules/resources.js'
 import { AnnouncementService } from './modules/announcements/AnnouncementService.js'
 import { AnnouncementController } from './modules/announcements/AnnouncementController.js'
@@ -34,11 +40,17 @@ class SchoolRepository extends PrismaRepository {
   }
 }
 
-// Composition root: dependencies are wired here, never inside controllers.
 export function createContainer({ db, jwt, config, overrides = {} }) {
   const users = new UserRepository(db)
   const passwords = overrides.passwords || new PasswordHasher()
   const tokens = new TokenService(jwt, config)
+  const hasCloudinary = Boolean(
+    config.CLOUDINARY_CLOUD_NAME && config.CLOUDINARY_API_KEY && config.CLOUDINARY_API_SECRET,
+  )
+  const storage = overrides.storage || (hasCloudinary
+    ? new CloudinaryStorageStrategy(config)
+    : new LocalStorageStrategy(config))
+  const uploads = overrides.uploads || new UploadService(storage)
   const schools = new SchoolRepository(db, resourceDefinitions.schools.select)
   const repositories = { users, schools }
   const controllers = {}
@@ -46,13 +58,15 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)
     repositories[name] = repository
     const service = name === 'users' ? new UserService(repository, definition, passwords)
-      : name === 'tutorials' || name === 'projects' ? new TutorialService(repository, definition, users)
-        : name === 'announcements' ? new AnnouncementService(repository, definition)
-          : new CrudService(repository, definition)
+      : name === 'tutorials' ? new TutorialService(repository, definition, users, uploads)
+        : name === 'projects' ? new ProjectService(repository, definition, users, uploads)
+          : name === 'announcements' ? new AnnouncementService(repository, definition)
+            : new CrudService(repository, definition)
     controllers[name] = name === 'users' ? new UserController(service, definition)
-      : name === 'tutorials' || name === 'projects' ? new TutorialController(service, definition)
-        : name === 'announcements' ? new AnnouncementController(service, definition)
-          : new CrudController(service, definition)
+      : name === 'tutorials' ? new TutorialController(service, definition)
+        : name === 'projects' ? new ProjectController(service, definition)
+          : name === 'announcements' ? new AnnouncementController(service, definition)
+            : new CrudController(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],
@@ -63,6 +77,10 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     sessions: new AuthRepository(db), schools: repositories.schools,
     groups: new PrismaRepository(db.roboticsGroup),
     mailer: overrides.mailer || new PasswordResetMailer(config), config })
-  return { controllers, auth: new AuthController(authService, tokens), policy: new AccessPolicy(tokens) }
+  return {
+    controllers,
+    auth: new AuthController(authService, tokens),
+    uploads: new UploadController(uploads),
+    policy: new AccessPolicy(tokens),
+  }
 }
-

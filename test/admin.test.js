@@ -14,13 +14,15 @@ test('public registration cannot grant ADMIN or inject onboarding fields', async
   t.after(() => app.close())
   const response = await app.inject({ method: 'POST', url: '/auth/register', payload: {
     name: 'Test', email: 'test@example.com', password: 'test-password', role: 'ADMIN',
-    onboardingStatus: 'COMPLETED', authProvider: 'GOOGLE', googleId: 'injected',
+    onboardingStatus: 'COMPLETED', authProvider: 'GOOGLE', googleId: 'injected', schoolId: 1,
   } })
   assert.equal(response.statusCode, 201)
   const body = response.json()
   assert.equal(body.user.role, 'TEACHER')
   assert.equal(body.user.onboardingStatus, 'PENDING')
+  assert.equal(body.user.schoolId, null)
   assert.equal(db.tables.user[0].role, 'TEACHER')
+  assert.equal(db.tables.user[0].schoolId, null)
   assert.equal(db.tables.user[0].authProvider, 'LOCAL')
   assert.equal(db.tables.user[0].googleId, null)
   assert.equal(app.jwt.verify(body.accessToken).role, 'TEACHER')
@@ -34,10 +36,11 @@ test('registration service enforces TEACHER even without the HTTP validator', as
   const service = new AuthService({ users: { create: async data => { saved = data; return { id: 1, ...data } } },
     passwords: { hash: async () => 'hashed' } })
   service.issueSession = async user => user
-  await service.register({ name: 'Test', email: 'test@example.com', password: 'test-password', role: 'ADMIN', googleId: 'injected' })
+  await service.register({ name: 'Test', email: 'test@example.com', password: 'test-password', role: 'ADMIN', googleId: 'injected', schoolId: 1 })
   assert.equal(saved.role, 'TEACHER')
   assert.equal(saved.onboardingStatus, 'PENDING')
   assert.ok(!('googleId' in saved))
+  assert.ok(!('schoolId' in saved))
 })
 
 test('internal promotion preserves credentials, completes onboarding and revokes sessions', async () => {

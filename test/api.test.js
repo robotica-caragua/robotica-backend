@@ -124,10 +124,14 @@ test('teacher onboarding checks relations and issues an updated access token', a
   assert.equal((await request('POST', '/auth/onboarding', { schoolId: 999 }, headers)).status, 404)
   assert.equal((await request('POST', '/auth/onboarding', { roboticsGroupId: 999 }, headers)).status, 404)
   const school = await db.school.create({ data: { name: 'Escola' } })
+  const otherSchool = await db.school.create({ data: { name: 'Outra Escola' } })
   const group = await db.roboticsGroup.create({ data: { name: 'Grupo' } })
   const completed = await request('POST', '/auth/onboarding', { schoolId: school.id, roboticsGroupId: group.id }, headers)
   assert.equal(completed.status, 200)
   assert.equal(completed.body.user.onboardingStatus, 'COMPLETED')
+  assert.equal((await request('POST', '/auth/onboarding', { schoolId: otherSchool.id }, headers)).status, 409)
+  assert.equal((await request('POST', '/auth/onboarding', { schoolId: otherSchool.id }, bearer(completed.body.accessToken))).status, 409)
+  assert.equal(db.tables.user[0].schoolId, school.id)
   assert.equal((await request('GET', '/projects', undefined, bearer(completed.body.accessToken))).status, 404)
   assert.equal((await request('GET', '/users', undefined, bearer(completed.body.accessToken))).status, 403)
 })
@@ -188,9 +192,10 @@ test('categories and tutorials: public reads, protected writes, school-scoped te
   assert.equal((await request('DELETE', `/categories/${category.id}`)).status, 401)
   assert.equal((await request('POST', '/tutorials', tutorialBody(schoolA.id))).status, 401)
   // Teacher of school A (onboarded).
-  const registered = await register({ email: 'prof@school.example', schoolId: schoolA.id })
-  const login = await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })
-  const teacher = bearer(login.body.accessToken)
+  const registered = await register({ email: 'prof@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: schoolA.id }, bearer(registered.body.accessToken))
+  assert.equal(onboarded.status, 200)
+  const teacher = bearer(onboarded.body.accessToken)
   assert.equal(db.tables.user.find(u => u.email === 'prof@school.example').schoolId, schoolA.id, String(registered.status))
   assert.equal((await request('POST', '/categories', { name: 'X' }, teacher)).status, 403)
   assert.equal((await request('PUT', `/categories/${category.id}`, { name: 'X' }, teacher)).status, 403)
@@ -205,6 +210,7 @@ test('categories and tutorials: public reads, protected writes, school-scoped te
   assert.equal((await request('PUT', `/tutorials/${foreign}`, { title: 'Hack' }, teacher)).status, 403)
   assert.equal((await request('DELETE', `/tutorials/${foreign}`, undefined, teacher)).status, 403)
   assert.equal((await request('DELETE', `/tutorials/${ownId}`, undefined, teacher)).status, 200)
+  assert.equal((await request('DELETE', `/tutorials/${foreign}`, undefined, admin)).status, 200)
 })
 test('teachers can be linked to several schools and see them in /auth/me and scoped writes', async t => {
   const { request, register, createAdmin } = await fixture(t)
@@ -212,7 +218,9 @@ test('teachers can be linked to several schools and see them in /auth/me and sco
   const [a, b, c] = await Promise.all(['A', 'B', 'C'].map(async name =>
     (await request('POST', '/schools', { name, description: `Descrição ${name}` }, admin)).body.school))
   assert.equal(a.description, 'Descrição A')
-  await register({ email: 'multi@school.example', schoolId: a.id })
+  const registered = await register({ email: 'multi@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: a.id }, bearer(registered.body.accessToken))
+  assert.equal(onboarded.status, 200)
   const login = await request('POST', '/auth/login', { email: 'multi@school.example', password: 'original-password' })
   const teacher = bearer(login.body.accessToken)
   assert.deepEqual(login.body.user.schools.map(s => s.id), [a.id])
@@ -227,7 +235,8 @@ test('announcements: admin writes, any authenticated user reads', async t => {
   const { request, register, createAdmin } = await fixture(t)
   const admin = bearer((await createAdmin()).body.accessToken)
   const school = (await request('POST', '/schools', { name: 'A' }, admin)).body.school
-  await register({ email: 'prof@school.example', schoolId: school.id })
+  const registered = await register({ email: 'prof@school.example' })
+  await request('POST', '/auth/onboarding', { schoolId: school.id }, bearer(registered.body.accessToken))
   const teacher = bearer((await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })).body.accessToken)
   assert.equal((await request('GET', '/announcements')).status, 401)
   assert.deepEqual((await request('GET', '/announcements', undefined, teacher)).body.announcements, [])
@@ -315,4 +324,164 @@ test('Google Strategy verifies audience, domain, email verification, creates and
   assert.equal((await google()).status, 200)
   assert.equal(db.tables.user.length, 2)
   assert.equal(db.tables.user[1].googleId, 'linked-id')
+})
+
+test('projects are school-scoped: teachers cannot read or change other schools projects', async t => {
+  const { request, register, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const schoolA = (await request('POST', '/schools', { name: 'A' }, admin)).body.school
+  const schoolB = (await request('POST', '/schools', { name: 'B' }, admin)).body.school
+  const projectA = (await request('POST', '/projects', { name: 'Projeto A', schoolId: schoolA.id }, admin)).body.project
+  const projectB = (await request('POST', '/projects', { name: 'Projeto B', schoolId: schoolB.id }, admin)).body.project
+  const registered = await register({ email: 'prof@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: schoolA.id }, bearer(registered.body.accessToken))
+  assert.equal(onboarded.status, 200)
+  const teacher = bearer(onboarded.body.accessToken)
+  // Own school: full access.
+  const own = await request('POST', '/projects', { name: 'Novo', schoolId: schoolA.id }, teacher)
+  assert.equal(own.status, 201)
+  assert.equal((await request('GET', `/projects/${projectA.id}`, undefined, teacher)).status, 200)
+  assert.equal((await request('PUT', `/projects/${projectA.id}`, { name: 'Editado' }, teacher)).status, 200)
+  assert.deepEqual((await request('GET', '/projects', undefined, teacher)).body.projects.map(p => p.schoolId), [schoolA.id, schoolA.id])
+  // Other school: every operation is denied.
+  assert.equal((await request('POST', '/projects', { name: 'X', schoolId: schoolB.id }, teacher)).status, 403)
+  assert.equal((await request('GET', `/projects/${projectB.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('PUT', `/projects/${projectB.id}`, { name: 'Hack' }, teacher)).status, 403)
+  assert.equal((await request('PUT', `/projects/${projectA.id}`, { schoolId: schoolB.id }, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/projects/${projectB.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('GET', '/projects', undefined, admin)).body.projects.length, 3)
+  // Teacher without a school (onboarded only via group) has no project access.
+  const outsider = await register({ email: 'nogroup@school.example' })
+  assert.equal((await request('GET', '/projects', undefined, bearer(outsider.body.accessToken))).status, 403)
+  // Admin keeps full access.
+  assert.equal((await request('DELETE', `/projects/${projectB.id}`, undefined, admin)).status, 200)
+})
+
+test('CORS only allows configured origins and supports cookies and all CRUD methods', async t => {
+  const db = new MemoryDatabase()
+  const app = await buildApp({ db, config: { ...config, CORS_ORIGINS: ['http://frontend.example'] } })
+  t.after(() => app.close())
+  const preflight = (origin, method = 'PUT') => app.inject({ method: 'OPTIONS', url: '/projects/1',
+    headers: { origin, 'access-control-request-method': method, 'access-control-request-headers': 'authorization,content-type' } })
+  const allowed = await preflight('http://frontend.example')
+  assert.equal(allowed.headers['access-control-allow-origin'], 'http://frontend.example')
+  assert.equal(allowed.headers['access-control-allow-credentials'], 'true')
+  assert.match(allowed.headers['access-control-allow-methods'], /PUT/)
+  assert.match((await preflight('http://frontend.example', 'DELETE')).headers['access-control-allow-methods'], /DELETE/)
+  const simple = await app.inject({ method: 'GET', url: '/status', headers: { origin: 'http://frontend.example' } })
+  assert.equal(simple.headers['access-control-allow-origin'], 'http://frontend.example')
+  assert.equal(simple.headers['access-control-allow-credentials'], 'true')
+  const denied = await preflight('http://evil.example')
+  // Sem Allow-Origin o navegador bloqueia a resposta, mesmo que o plugin envie Allow-Credentials.
+  assert.equal(denied.headers['access-control-allow-origin'], undefined)
+})
+
+test('loadConfig validates CORS_ORIGINS and rejects wildcards', async () => {
+  const { loadConfig } = await import('../src/config/env.js')
+  const base = { DATABASE_URL: 'mysql://u:p@127.0.0.1:3306/db', JWT_ACCESS_SECRET: 'x'.repeat(32) }
+  assert.deepEqual(loadConfig(base).CORS_ORIGINS, ['http://localhost:3000'])
+  assert.deepEqual(loadConfig({ ...base, CORS_ORIGINS: 'https://a.example/, https://b.example' }).CORS_ORIGINS,
+    ['https://a.example', 'https://b.example'])
+  assert.throws(() => loadConfig({ ...base, CORS_ORIGINS: '*' }))
+  assert.throws(() => loadConfig({ ...base, CORS_ORIGINS: 'https://a.example/path' }))
+})
+
+test('multi-image upload endpoint and fluid images in projects and tutorials', async t => {
+  const { request, createAdmin, app } = await fixture(t)
+  const samplePng = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII='
+  const sampleJpg = 'data:image/jpeg;base64,' + Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0x00, 0x10, 0x4a, 0x46, 0x49, 0x46]).toString('base64')
+
+  assert.equal((await request('POST', '/uploads/images', { image: samplePng })).status, 401)
+
+  const admin = bearer((await createAdmin()).body.accessToken)
+  assert.equal((await request('POST', '/uploads/images', {}, admin)).status, 400)
+  assert.equal((await request('POST', '/uploads/images', { image: 'data:image/png;base64,aGVsbG8=' }, admin)).status, 400)
+
+  const uploaded = await request('POST', '/uploads/images', { images: [samplePng, sampleJpg] }, admin)
+  assert.equal(uploaded.status, 201)
+  assert.equal(uploaded.body.images.length, 2)
+  assert.equal(uploaded.body.imageUrl, uploaded.body.images[0])
+  assert.match(uploaded.body.imageUrl, /^http:\/\/localhost:3333\/uploads\/[a-f0-9-]+\.png$/)
+
+  const filename = uploaded.body.imageUrl.split('/').pop()
+  const served = await app.inject({ method: 'GET', url: `/uploads/${filename}` })
+  assert.equal(served.statusCode, 200)
+  assert.match(served.headers['content-type'], /image\/png/)
+  assert.equal((await request('GET', '/uploads/invalid..png')).status, 400)
+  assert.equal((await request('GET', '/uploads/00000000-0000-0000-0000-000000000000.png')).status, 404)
+
+  const school = (await request('POST', '/schools', { name: 'Escola' }, admin)).body.school
+  const category = (await request('POST', '/categories', { name: 'Mecânica' }, admin)).body.category
+
+  const project = await request('POST', '/projects', {
+    name: 'Robô Seguidor',
+    description: 'Com fotos',
+    schoolId: school.id,
+    images: [samplePng, sampleJpg],
+  }, admin)
+  assert.equal(project.status, 201)
+  assert.equal(project.body.project.images.length, 2)
+  assert.equal(project.body.project.imageUrl, project.body.project.images[0])
+
+  const projectList = await request('GET', '/projects', undefined, admin)
+  assert.equal(projectList.status, 200)
+  assert.equal(projectList.body.projects[0].imageUrl, project.body.project.imageUrl)
+  assert.deepEqual(projectList.body.projects[0].images, project.body.project.images)
+
+  const updatedProject = await request('PUT', `/projects/${project.body.project.id}`, {
+    images: [project.body.project.images[0], samplePng],
+  }, admin)
+  assert.equal(updatedProject.status, 200)
+  assert.equal(updatedProject.body.project.images.length, 2)
+  assert.equal(updatedProject.body.project.images[0], project.body.project.images[0])
+
+  const tutorial = await request('POST', '/tutorials', {
+    title: 'Montagem do Chassi',
+    description: 'Passo a passo',
+    categoryId: category.id,
+    difficulty: 'EASY',
+    schoolId: school.id,
+    materialsNeeded: ['Chassi', 'Rodas'],
+    images: [samplePng],
+  }, admin)
+  assert.equal(tutorial.status, 201)
+  assert.equal(tutorial.body.tutorial.images.length, 1)
+  assert.equal(tutorial.body.tutorial.imageUrl, tutorial.body.tutorial.images[0])
+
+  const tutorialList = await request('GET', '/tutorials')
+  assert.equal(tutorialList.status, 200)
+  assert.equal(tutorialList.body.tutorials[0].imageUrl, tutorial.body.tutorial.imageUrl)
+  assert.deepEqual(tutorialList.body.tutorials[0].images, tutorial.body.tutorial.images)
+})
+
+test('resolvePoolConfig parses MySQL/MariaDB URLs and SSL parameters for cloud databases', async () => {
+  const { resolvePoolConfig } = await import('../src/core/database/prisma.js')
+  const local = resolvePoolConfig('mysql://root:secret@127.0.0.1:3306/robotica')
+  assert.equal(local.host, '127.0.0.1')
+  assert.equal(local.port, 3306)
+  assert.equal(local.ssl, undefined)
+
+  const tidb = resolvePoolConfig('mysql://user:pass@gateway01.prod.aws.tidbcloud.com:4000/test?sslaccept=strict')
+  assert.equal(tidb.port, 4000)
+  assert.deepEqual(tidb.ssl, { rejectUnauthorized: true })
+
+  const aiven = resolvePoolConfig('mysql://avnadmin:pass@mysql-demo.aivencloud.com:12345/defaultdb?ssl-mode=REQUIRED')
+  assert.deepEqual(aiven.ssl, { rejectUnauthorized: false })
+
+  assert.throws(() => resolvePoolConfig('postgres://user:pass@localhost:5432/db'))
+})
+
+test('TokenService uses SameSite=None and Secure for refresh cookie in production', async t => {
+  const db = new MemoryDatabase()
+  const app = await buildApp({ db, config: { ...config, NODE_ENV: 'production' } })
+  t.after(() => app.close())
+  const response = await app.inject({
+    method: 'POST',
+    url: '/auth/register',
+    payload: { name: 'Prod User', email: 'prod@school.example', password: 'valid-password' },
+  })
+  assert.equal(response.statusCode, 201)
+  assert.match(response.headers['set-cookie'], /SameSite=None/)
+  assert.match(response.headers['set-cookie'], /Secure/)
+  assert.match(response.headers['set-cookie'], /HttpOnly/)
 })

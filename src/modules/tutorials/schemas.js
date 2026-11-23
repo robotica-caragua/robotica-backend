@@ -26,6 +26,11 @@ export const createTutorialSchema = z.object({
     .max(50, 'Informe no máximo 50 materiais'),
 
   tutorialUrl: z.url('URL de tutorial inválido.').optional(),
+  imageUrl: z.string().trim().min(1, 'A imagem não pode estar vazia.').nullable().optional(),
+  images: z
+    .array(z.string().trim().min(1, 'A imagem não pode estar vazia.'))
+    .max(10, 'Informe no máximo 10 imagens.')
+    .optional(),
 })
 
 export const updateTutorialSchema = createTutorialSchema

@@ -22,11 +22,15 @@ export class AuthService {
   }
 
   async register(data) {
-    const role = 'TEACHER'
-    const completed = Boolean(data.schoolId) || Boolean(data.schoolIds?.length)
-    const user = await this.users.create({ name: data.name, email: data.email, schoolId: data.schoolId, ...(Array.isArray(data.schoolIds) ? { schoolIds: data.schoolIds } : {}), role, password: await this.passwords.hash(data.password),
-      authProvider: 'LOCAL', onboardingStatus: completed ? 'COMPLETED' : 'PENDING',
-      onboardingCompletedAt: completed ? new Date() : null })
+    const user = await this.users.create({
+      name: data.name,
+      email: data.email,
+      role: 'TEACHER',
+      password: await this.passwords.hash(data.password),
+      authProvider: 'LOCAL',
+      onboardingStatus: 'PENDING',
+      onboardingCompletedAt: null,
+    })
     return this.issueSession(user)
   }
 
@@ -54,6 +58,9 @@ export class AuthService {
   }
 
   async completeOnboarding(id, data) {
+    const current = await this.users.findById(id)
+    if (!current) throw new AppError(404, 'Usuário não encontrado.')
+    if (current.onboardingStatus === 'COMPLETED') throw new AppError(409, 'Onboarding já concluído.')
     if (data.schoolId && !await this.schools.findById(data.schoolId)) throw new AppError(404, 'Escola não encontrada.')
     if (Array.isArray(data.schoolIds)) {
       for (const sid of data.schoolIds) {

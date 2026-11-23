@@ -102,6 +102,8 @@ model Project {
   description String?
   schoolId    Int
   school      School   @relation(fields: [schoolId], references: [id])
+  imageUrl    String?  @db.VarChar(2048)
+  images      Json?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 }
@@ -117,6 +119,8 @@ model Tutorial {
   school          School     @relation(fields: [schoolId], references: [id])
   materialsNeeded Json
   tutorialUrl     String?
+  imageUrl        String?    @db.VarChar(2048)
+  images          Json?
   createdAt       DateTime   @default(now())
   updatedAt       DateTime   @updatedAt
 }

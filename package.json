@@ -4,6 +4,7 @@
   "description": "API de Robótica em JavaScript, Fastify, POO e Strategy",
   "private": true,
   "scripts": {
+    "postinstall": "prisma generate",
     "test": "node --test test/*.test.js",
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
@@ -45,12 +46,12 @@
     "fastify-plugin": "^6.0.0",
     "google-auth-library": "^10.9.1",
     "nodemailer": "^7.0.13",
+    "prisma": "^7.10.0",
     "zod": "^4.5.4"
   },
   "devDependencies": {
     "eslint": "^10.10.0",
-    "prettier": "^3.9.6",
-    "prisma": "^7.10.0"
+    "prettier": "^3.9.6"
   },
   "engines": {
     "node": ">=22.12.0"

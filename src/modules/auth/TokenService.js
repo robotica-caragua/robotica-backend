@@ -17,7 +17,14 @@ export class TokenService {
     return request.cookies.refreshToken || null
   }
   cookieOptions(expires) {
-    return { httpOnly: true, path: '/', sameSite: 'lax', secure: this.config.NODE_ENV === 'production', expires }
+    const isProduction = this.config.NODE_ENV === 'production'
+    return {
+      httpOnly: true,
+      path: '/',
+      sameSite: isProduction ? 'none' : 'lax',
+      secure: isProduction,
+      expires,
+    }
   }
   setCookie(reply, token, expires) { reply.setCookie('refreshToken', token, this.cookieOptions(expires)) }
   clearCookie(reply) { reply.clearCookie('refreshToken', this.cookieOptions(new Date(0))) }

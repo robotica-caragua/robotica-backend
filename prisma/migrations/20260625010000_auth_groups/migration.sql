@@ -11,8 +11,10 @@ CREATE TABLE `RoboticsGroup` (
 
 -- AlterTable
 ALTER TABLE `User`
-    ADD COLUMN `roboticsGroupId` INT NULL,
-    ADD INDEX `User_roboticsGroupId_idx`(`roboticsGroupId`);
+    ADD COLUMN `roboticsGroupId` INT NULL;
+
+-- CreateIndex
+CREATE INDEX `User_roboticsGroupId_idx` ON `User`(`roboticsGroupId`);
 
 -- AddForeignKey
 ALTER TABLE `User` ADD CONSTRAINT `User_roboticsGroupId_fkey` FOREIGN KEY (`roboticsGroupId`) REFERENCES `RoboticsGroup`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
