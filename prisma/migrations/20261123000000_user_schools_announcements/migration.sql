@@ -2,6 +2,30 @@
 ALTER TABLE `School` ADD COLUMN `description` TEXT NULL;
 
 -- CreateTable
+CREATE TABLE `Event` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `title` VARCHAR(191) NOT NULL,
+    `type` VARCHAR(191) NOT NULL DEFAULT 'torneio',
+    `description` TEXT NULL,
+    `date` VARCHAR(191) NOT NULL,
+    `time` VARCHAR(191) NULL,
+    `location` VARCHAR(191) NOT NULL,
+    `registration` VARCHAR(191) NOT NULL DEFAULT 'abertas',
+    `status` VARCHAR(191) NOT NULL DEFAULT 'agendado',
+    `agenda` JSON NULL,
+    `documents` JSON NULL,
+    `schoolId` INTEGER NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    INDEX `Event_schoolId_fkey`(`schoolId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `Event` ADD CONSTRAINT `Event_schoolId_fkey` FOREIGN KEY (`schoolId`) REFERENCES `School`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- CreateTable
 CREATE TABLE `Announcement` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `title` VARCHAR(191) NOT NULL,

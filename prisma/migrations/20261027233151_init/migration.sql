@@ -1,5 +1,5 @@
 -- AlterTable
-ALTER TABLE `authsession` ALTER COLUMN `updatedAt` DROP DEFAULT;
+ALTER TABLE `AuthSession` ALTER COLUMN `updatedAt` DROP DEFAULT;
 
 -- AlterTable
-ALTER TABLE `roboticsgroup` ALTER COLUMN `updatedAt` DROP DEFAULT;
+ALTER TABLE `RoboticsGroup` ALTER COLUMN `updatedAt` DROP DEFAULT;
