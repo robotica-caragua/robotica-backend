@@ -144,6 +144,8 @@ Administradores existentes permanecem administradores. Depois de provisionar o p
 | GET | `/users/:id/school` | Admin |
 | GET/POST | `/projects` | Autenticado com onboarding concluído |
 | GET/PUT/DELETE | `/projects/:id` | Autenticado com onboarding concluído |
+| GET/POST | `/groups` | Autenticado com onboarding concluído (escopado por escola para TEACHER) |
+| GET/PUT/DELETE | `/groups/:id` | Autenticado com onboarding concluído (escopado por escola para TEACHER) |
 | POST | `/uploads/images` | Autenticado com onboarding concluído |
 | GET | `/uploads/:filename` | Público (arquivos locais em desenvolvimento) |
 | GET/POST | `/categories`, `/tutorials` | Público, como na `joao` |

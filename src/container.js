@@ -25,6 +25,8 @@ import { UploadController } from './modules/uploads/UploadController.js'
 import { resourceDefinitions } from './modules/resources.js'
 import { AnnouncementService } from './modules/announcements/AnnouncementService.js'
 import { AnnouncementController } from './modules/announcements/AnnouncementController.js'
+import { GroupService } from './modules/groups/GroupService.js'
+import { GroupController } from './modules/groups/GroupController.js'
 
 class SchoolRepository extends PrismaRepository {
   constructor(db, select) {
@@ -35,6 +37,7 @@ class SchoolRepository extends PrismaRepository {
     return this.db.$transaction(async (tx) => {
       await tx.user.updateMany({ where: { schoolId: id }, data: { schoolId: null } })
       await tx.event?.updateMany?.({ where: { schoolId: id }, data: { schoolId: null } })
+      await tx.roboticsGroup?.updateMany?.({ where: { schoolId: id }, data: { schoolId: null } })
       await tx.project.deleteMany({ where: { schoolId: id } })
       await tx.tutorial.deleteMany({ where: { schoolId: id } })
       return tx.school.delete({ where: { id }, select: this.select })
@@ -57,18 +60,21 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
   const repositories = { users, schools }
   const controllers = {}
   for (const [name, definition] of Object.entries(resourceDefinitions)) {
-    const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)
+    const modelName = definition.model || definition.key
+    const repository = repositories[name] || new PrismaRepository(db[modelName], definition.select)
     repositories[name] = repository
     const service = name === 'users' ? new UserService(repository, definition, passwords)
       : name === 'tutorials' ? new TutorialService(repository, definition, users, uploads)
         : name === 'projects' ? new ProjectService(repository, definition, users, uploads)
-          : name === 'announcements' ? new AnnouncementService(repository, definition)
-            : new CrudService(repository, definition)
+          : name === 'groups' ? new GroupService(repository, definition, users)
+            : name === 'announcements' ? new AnnouncementService(repository, definition)
+              : new CrudService(repository, definition)
     controllers[name] = name === 'users' ? new UserController(service, definition)
       : name === 'tutorials' ? new TutorialController(service, definition)
         : name === 'projects' ? new ProjectController(service, definition)
-          : name === 'announcements' ? new AnnouncementController(service, definition)
-            : new CrudController(service, definition)
+          : name === 'groups' ? new GroupController(service, definition)
+            : name === 'announcements' ? new AnnouncementController(service, definition)
+              : new CrudController(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],
@@ -77,7 +83,7 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
   ])
   const authService = new AuthService({ users, passwords, tokens, strategies,
     sessions: new AuthRepository(db), schools: repositories.schools,
-    groups: new PrismaRepository(db.roboticsGroup),
+    groups: repositories.groups,
     mailer: overrides.mailer || new PasswordResetMailer(config), config })
   return {
     controllers,

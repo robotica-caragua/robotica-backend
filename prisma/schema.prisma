@@ -46,15 +46,16 @@ model User {
 }
 
 model School {
-  id          Int        @id @default(autoincrement())
-  name        String
-  address     String?
-  description String?    @db.Text
-  users       User[]     @relation("UserPrimarySchool")
-  linkedUsers User[]     @relation("UserSchools")
-  projects    Project[]
-  tutorials   Tutorial[]
-  events      Event[]
+  id             Int             @id @default(autoincrement())
+  name           String
+  address        String?
+  description    String?         @db.Text
+  users          User[]          @relation("UserPrimarySchool")
+  linkedUsers    User[]          @relation("UserSchools")
+  projects       Project[]
+  tutorials      Tutorial[]
+  events         Event[]
+  roboticsGroups RoboticsGroup[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -88,9 +89,13 @@ model Announcement {
 }
 
 model RoboticsGroup {
-  id    Int    @id @default(autoincrement())
-  name  String @unique
-  users User[]
+  id        Int      @id @default(autoincrement())
+  name      String   @unique
+  students  String?  @db.Text
+  grade     String?
+  schoolId  Int?
+  school    School?  @relation(fields: [schoolId], references: [id], onDelete: SetNull)
+  users     User[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -99,7 +104,7 @@ model RoboticsGroup {
 model Project {
   id          Int      @id @default(autoincrement())
   name        String
-  description String?
+  description String?  @db.Text
   schoolId    Int
   school      School   @relation(fields: [schoolId], references: [id])
   imageUrl    String?  @db.VarChar(2048)
@@ -111,7 +116,7 @@ model Project {
 model Tutorial {
   id              Int        @id @default(autoincrement())
   title           String
-  description     String
+  description     String     @db.Text
   categoryId      Int
   category        Category   @relation(fields: [categoryId], references: [id])
   difficulty      Difficulty
