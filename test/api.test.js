@@ -302,6 +302,17 @@ test('unified user creation validates conditional fields for PROFESSOR and ADMIN
   assert.equal(validAdmin.body.user.permissaoAdministrador, true)
   assert.equal(validAdmin.body.user.matricula, null)
   assert.deepEqual(validAdmin.body.user.schools, [])
+
+  // Admin cannot delete their own logged-in account
+  const me = (await request('GET', '/auth/me', undefined, admin)).body.user
+  const selfDelete = await request('DELETE', `/users/${me.id}`, undefined, admin)
+  assert.equal(selfDelete.status, 400)
+
+  // Admin can delete another user safely even with N:N linked schools
+  const deletedTeacher = await request('DELETE', `/users/${validTeacher.body.user.id}`, undefined, admin)
+  assert.equal(deletedTeacher.status, 200)
+  assert.equal(deletedTeacher.body.user.id, validTeacher.body.user.id)
+  assert.equal((await request('GET', `/users/${validTeacher.body.user.id}`, undefined, admin)).status, 404)
 })
 test('Google Strategy verifies audience, domain, email verification, creates and links accounts', async t => {
   let payload = { email: 'google@school.example', sub: 'google-sub', email_verified: true, name: 'Google User' }
