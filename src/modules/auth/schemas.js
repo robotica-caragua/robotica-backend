@@ -35,9 +35,10 @@ export const googleLoginSchema = z.object({
 export const completeOnboardingSchema = z
   .object({
     schoolId: z.number().int().positive('O campo schoolId é inválido.').optional(),
+    schoolIds: z.array(z.number().int().positive('O campo schoolIds é inválido.')).optional(),
     roboticsGroupId: z.number().int().positive('O campo roboticsGroupId é inválido.').optional(),
   })
   .refine(
-    (data) => Boolean(data.schoolId) || Boolean(data.roboticsGroupId),
+    (data) => Boolean(data.schoolId) || Boolean(data.schoolIds?.length) || Boolean(data.roboticsGroupId),
     'Informe schoolId ou roboticsGroupId.',
   )

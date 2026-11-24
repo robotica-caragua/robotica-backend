@@ -62,6 +62,11 @@ export class AuthService {
     if (!current) throw new AppError(404, 'Usuário não encontrado.')
     if (current.onboardingStatus === 'COMPLETED') throw new AppError(409, 'Onboarding já concluído.')
     if (data.schoolId && !await this.schools.findById(data.schoolId)) throw new AppError(404, 'Escola não encontrada.')
+    if (Array.isArray(data.schoolIds)) {
+      for (const sid of data.schoolIds) {
+        if (!await this.schools.findById(sid)) throw new AppError(404, 'Escola não encontrada.')
+      }
+    }
     if (data.roboticsGroupId && !await this.groups.findById(data.roboticsGroupId)) throw new AppError(404, 'Grupo de robótica não encontrado.')
     const user = await this.users.update(id, { ...data, onboardingStatus: 'COMPLETED', onboardingCompletedAt: new Date() })
     return { user: new User(user).toPublic(), accessToken: this.tokens.sign(user) }

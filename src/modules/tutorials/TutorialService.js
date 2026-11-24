@@ -1,7 +1,7 @@
 import { CrudService } from '../../core/http/CrudService.js'
 import { AppError } from '../../core/errors/AppError.js'
 
-// Admins manage every tutorial; teachers only those of their own school.
+// Admins manage every tutorial; teachers only those of their own linked schools.
 export class TutorialService extends CrudService {
   constructor(repository, definition, users, uploads) {
     super(repository, definition)
@@ -12,8 +12,9 @@ export class TutorialService extends CrudService {
   async assertCanManage(actor, schoolId) {
     if (actor.role === 'ADMIN') return
     const user = await this.users.findById(actor.userId)
-    if (!user?.schoolId || user.schoolId !== schoolId) {
-      throw new AppError(403, 'Você só pode gerenciar tutoriais da sua própria escola.')
+    const linked = new Set([user?.schoolId, ...(user?.schools ?? []).map(school => school.id)].filter(Boolean))
+    if (!linked.has(schoolId)) {
+      throw new AppError(403, 'Você só pode gerenciar conteúdos das escolas às quais está vinculado.')
     }
   }
 

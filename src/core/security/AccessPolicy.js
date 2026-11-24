@@ -24,4 +24,11 @@ export class AccessPolicy {
       if (!roles.includes(request.authUser.role)) throw new AppError(403, 'Acesso negado.')
     }
   }
+
+  selfOrAdmin = async (request) => {
+    const targetId = Number(request.params?.id)
+    if (request.authUser.role !== 'ADMIN' && request.authUser.userId !== targetId) {
+      throw new AppError(403, 'Acesso negado.')
+    }
+  }
 }

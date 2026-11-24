@@ -212,6 +212,97 @@ test('categories and tutorials: public reads, protected writes, school-scoped te
   assert.equal((await request('DELETE', `/tutorials/${ownId}`, undefined, teacher)).status, 200)
   assert.equal((await request('DELETE', `/tutorials/${foreign}`, undefined, admin)).status, 200)
 })
+test('teachers can be linked to several schools and see them in /auth/me and scoped writes', async t => {
+  const { request, register, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const [a, b, c] = await Promise.all(['A', 'B', 'C'].map(async name =>
+    (await request('POST', '/schools', { name, description: `Descrição ${name}` }, admin)).body.school))
+  assert.equal(a.description, 'Descrição A')
+  const registered = await register({ email: 'multi@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: a.id }, bearer(registered.body.accessToken))
+  assert.equal(onboarded.status, 200)
+  const login = await request('POST', '/auth/login', { email: 'multi@school.example', password: 'original-password' })
+  const teacher = bearer(login.body.accessToken)
+  assert.deepEqual(login.body.user.schools.map(s => s.id), [a.id])
+  const updated = await request('PUT', `/users/${login.body.user.id}`, { schoolIds: [a.id, b.id] }, admin)
+  assert.equal(updated.status, 200)
+  assert.deepEqual(updated.body.user.schools.map(s => s.id), [a.id, b.id])
+  assert.deepEqual((await request('GET', '/auth/me', undefined, teacher)).body.user.schools.map(s => s.id), [a.id, b.id])
+  assert.equal((await request('POST', '/projects', { name: 'P', schoolId: b.id }, teacher)).status, 201)
+  assert.equal((await request('POST', '/projects', { name: 'P', schoolId: c.id }, teacher)).status, 403)
+})
+test('announcements: admin writes, any authenticated user reads', async t => {
+  const { request, register, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const school = (await request('POST', '/schools', { name: 'A' }, admin)).body.school
+  const registered = await register({ email: 'prof@school.example' })
+  await request('POST', '/auth/onboarding', { schoolId: school.id }, bearer(registered.body.accessToken))
+  const teacher = bearer((await request('POST', '/auth/login', { email: 'prof@school.example', password: 'original-password' })).body.accessToken)
+  assert.equal((await request('GET', '/announcements')).status, 401)
+  assert.deepEqual((await request('GET', '/announcements', undefined, teacher)).body.announcements, [])
+  assert.equal((await request('POST', '/announcements', { title: 'Oi', message: 'Reunião' }, teacher)).status, 403)
+  assert.equal((await request('POST', '/announcements', { title: '', message: 'x' }, admin)).status, 400)
+  const created = await request('POST', '/announcements', { title: 'Reunião', message: 'Sexta às 14h' }, admin)
+  assert.equal(created.status, 201)
+  assert.equal((await request('GET', '/announcements', undefined, teacher)).body.announcements[0].title, 'Reunião')
+  assert.equal((await request('DELETE', `/announcements/${created.body.announcement.id}`, undefined, admin)).status, 200)
+})
+test('unified user creation validates conditional fields for PROFESSOR and ADMINISTRADOR profiles', async t => {
+  const { request, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const school = (await request('POST', '/schools', { name: 'Escola A' }, admin)).body.school
+
+  // PROFESSOR requires matricula and at least 1 linked school
+  const missingMatricula = await request('POST', '/users', {
+    name: 'Prof Sem Matricula',
+    email: 'prof1@school.example',
+    password: 'StrongPassword1!',
+    perfil: 'PROFESSOR',
+    schoolIds: [school.id],
+  }, admin)
+  assert.equal(missingMatricula.status, 400)
+
+  const missingSchools = await request('POST', '/users', {
+    name: 'Prof Sem Escola',
+    email: 'prof2@school.example',
+    password: 'StrongPassword1!',
+    perfil: 'PROFESSOR',
+    matricula: '12345',
+    schoolIds: [],
+  }, admin)
+  assert.equal(missingSchools.status, 400)
+
+  const validTeacher = await request('POST', '/users', {
+    name: 'Prof Valido',
+    email: 'prof3@school.example',
+    password: 'StrongPassword1!',
+    perfil: 'PROFESSOR',
+    matricula: '202610',
+    schoolIds: [school.id],
+  }, admin)
+  assert.equal(validTeacher.status, 201)
+  assert.equal(validTeacher.body.user.role, 'TEACHER')
+  assert.equal(validTeacher.body.user.perfil, 'PROFESSOR')
+  assert.equal(validTeacher.body.user.permissaoAdministrador, false)
+  assert.equal(validTeacher.body.user.matricula, '202610')
+  assert.deepEqual(validTeacher.body.user.schools.map(s => s.id), [school.id])
+
+  // ADMINISTRADOR accepts null/empty matricula and empty schools ([]), setting permissaoAdministrador: true
+  const validAdmin = await request('POST', '/users', {
+    name: 'Admin Geral',
+    email: 'admingeral@school.example',
+    password: 'StrongPassword1!',
+    perfil: 'ADMINISTRADOR',
+    matricula: null,
+    schoolIds: [],
+  }, admin)
+  assert.equal(validAdmin.status, 201)
+  assert.equal(validAdmin.body.user.role, 'ADMIN')
+  assert.equal(validAdmin.body.user.perfil, 'ADMINISTRADOR')
+  assert.equal(validAdmin.body.user.permissaoAdministrador, true)
+  assert.equal(validAdmin.body.user.matricula, null)
+  assert.deepEqual(validAdmin.body.user.schools, [])
+})
 test('Google Strategy verifies audience, domain, email verification, creates and links accounts', async t => {
   let payload = { email: 'google@school.example', sub: 'google-sub', email_verified: true, name: 'Google User' }
   const calls = []

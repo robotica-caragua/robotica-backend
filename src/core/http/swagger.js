@@ -37,6 +37,8 @@ const crudConfig = {
   '/categories': { tag: 'Categories', readSecurity: [], writeSecurity: bearerSecurity, def: resourceDefinitions.categories },
   '/tutorials': { tag: 'Tutorials', readSecurity: [], writeSecurity: bearerSecurity, def: resourceDefinitions.tutorials },
   '/projects': { tag: 'Projects', readSecurity: bearerSecurity, writeSecurity: bearerSecurity, def: resourceDefinitions.projects },
+  '/events': { tag: 'Events', readSecurity: [], writeSecurity: bearerSecurity, def: resourceDefinitions.events },
+  '/announcements': { tag: 'Announcements', readSecurity: bearerSecurity, writeSecurity: bearerSecurity, def: resourceDefinitions.announcements },
 }
 
 const customRoutes = {
@@ -188,6 +190,32 @@ const customRoutes = {
       404: errorResponse('Imagem não encontrada'),
     },
   },
+  'GET /public/schools': {
+    tags: ['Schools'],
+    summary: 'Lista escolas publicamente',
+    response: {
+      200: { description: 'Escolas encontradas com sucesso!', type: 'object', additionalProperties: true },
+      404: errorResponse('Não foi encontrada nenhuma escola!'),
+    },
+  },
+  'GET /public/projects': {
+    tags: ['Projects'],
+    summary: 'Lista projetos publicamente para o catálogo',
+    response: {
+      200: { description: 'Projetos encontrados com sucesso!', type: 'object', additionalProperties: true },
+      404: errorResponse('Não foi encontrado nenhum projeto!'),
+    },
+  },
+  'GET /public/projects/:id': {
+    tags: ['Projects'],
+    summary: 'Busca detalhes públicos de um projeto por ID',
+    params: idParams('projeto'),
+    response: {
+      200: { description: 'Projeto encontrado com sucesso!', type: 'object', additionalProperties: true },
+      400: errorResponse('ID de projeto inválido.'),
+      404: errorResponse('Projeto não encontrado.'),
+    },
+  },
 }
 
 function buildCrudSchema(method, url) {
@@ -295,6 +323,8 @@ export async function registerSwagger(app) {
         { name: 'Categories', description: 'Categorias de tutoriais (leitura pública, escrita ADMIN)' },
         { name: 'Tutorials', description: 'Tutoriais (leitura pública, escrita ADMIN ou TEACHER da escola)' },
         { name: 'Projects', description: 'Projetos de robótica (usuários autenticados com onboarding concluído)' },
+        { name: 'Events', description: 'Eventos de robótica (leitura pública, escrita ADMIN)' },
+        { name: 'Announcements', description: 'Avisos da administração (leitura autenticada, escrita ADMIN)' },
         { name: 'Uploads', description: 'Upload e entrega de imagens de projetos e tutoriais' },
       ],
       components: {

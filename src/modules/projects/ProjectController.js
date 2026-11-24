@@ -2,6 +2,10 @@ import { CrudController } from '../../core/http/CrudController.js'
 import { parse } from '../../core/http/validation.js'
 
 export class ProjectController extends CrudController {
+  listPublic = async () => ({ message: this.definition.messages.list,
+    [this.definition.plural]: await this.service.list() })
+  getPublic = async request => ({ message: this.definition.messages.get,
+    [this.definition.key]: await this.service.get(this.id(request)) })
   list = async request => ({ message: this.definition.messages.list,
     [this.definition.plural]: await this.service.listAs(request.authUser) })
   get = async request => ({ message: this.definition.messages.get,

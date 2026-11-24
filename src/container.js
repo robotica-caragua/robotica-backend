@@ -23,6 +23,24 @@ import { LocalStorageStrategy } from './modules/uploads/strategies/LocalStorageS
 import { UploadService } from './modules/uploads/UploadService.js'
 import { UploadController } from './modules/uploads/UploadController.js'
 import { resourceDefinitions } from './modules/resources.js'
+import { AnnouncementService } from './modules/announcements/AnnouncementService.js'
+import { AnnouncementController } from './modules/announcements/AnnouncementController.js'
+
+class SchoolRepository extends PrismaRepository {
+  constructor(db, select) {
+    super(db.school, select)
+    this.db = db
+  }
+  async delete(id) {
+    return this.db.$transaction(async (tx) => {
+      await tx.user.updateMany({ where: { schoolId: id }, data: { schoolId: null } })
+      await tx.event?.updateMany?.({ where: { schoolId: id }, data: { schoolId: null } })
+      await tx.project.deleteMany({ where: { schoolId: id } })
+      await tx.tutorial.deleteMany({ where: { schoolId: id } })
+      return tx.school.delete({ where: { id }, select: this.select })
+    })
+  }
+}
 
 export function createContainer({ db, jwt, config, overrides = {} }) {
   const users = new UserRepository(db)
@@ -35,7 +53,8 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     ? new CloudinaryStorageStrategy(config)
     : new LocalStorageStrategy(config))
   const uploads = overrides.uploads || new UploadService(storage)
-  const repositories = { users }
+  const schools = new SchoolRepository(db, resourceDefinitions.schools.select)
+  const repositories = { users, schools }
   const controllers = {}
   for (const [name, definition] of Object.entries(resourceDefinitions)) {
     const repository = repositories[name] || new PrismaRepository(db[definition.key], definition.select)
@@ -43,11 +62,13 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     const service = name === 'users' ? new UserService(repository, definition, passwords)
       : name === 'tutorials' ? new TutorialService(repository, definition, users, uploads)
         : name === 'projects' ? new ProjectService(repository, definition, users, uploads)
-          : new CrudService(repository, definition)
+          : name === 'announcements' ? new AnnouncementService(repository, definition)
+            : new CrudService(repository, definition)
     controllers[name] = name === 'users' ? new UserController(service, definition)
       : name === 'tutorials' ? new TutorialController(service, definition)
         : name === 'projects' ? new ProjectController(service, definition)
-          : new CrudController(service, definition)
+          : name === 'announcements' ? new AnnouncementController(service, definition)
+            : new CrudController(service, definition)
   }
   const strategies = new Map([
     ['local', new LocalAuthenticationStrategy(users, passwords)],
@@ -65,4 +86,3 @@ export function createContainer({ db, jwt, config, overrides = {} }) {
     policy: new AccessPolicy(tokens),
   }
 }
-
