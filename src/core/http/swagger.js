@@ -39,6 +39,7 @@ const crudConfig = {
   '/projects': { tag: 'Projects', readSecurity: bearerSecurity, writeSecurity: bearerSecurity, def: resourceDefinitions.projects },
   '/events': { tag: 'Events', readSecurity: [], writeSecurity: bearerSecurity, def: resourceDefinitions.events },
   '/announcements': { tag: 'Announcements', readSecurity: bearerSecurity, writeSecurity: bearerSecurity, def: resourceDefinitions.announcements },
+  '/groups': { tag: 'Groups', readSecurity: bearerSecurity, writeSecurity: bearerSecurity, def: resourceDefinitions.groups },
 }
 
 const customRoutes = {
@@ -325,6 +326,7 @@ export async function registerSwagger(app) {
         { name: 'Projects', description: 'Projetos de robótica (usuários autenticados com onboarding concluído)' },
         { name: 'Events', description: 'Eventos de robótica (leitura pública, escrita ADMIN)' },
         { name: 'Announcements', description: 'Avisos da administração (leitura autenticada, escrita ADMIN)' },
+        { name: 'Groups', description: 'Equipes de robótica (ADMIN global, TEACHER das escolas vinculadas)' },
         { name: 'Uploads', description: 'Upload e entrega de imagens de projetos e tutoriais' },
       ],
       components: {

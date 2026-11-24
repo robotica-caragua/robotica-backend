@@ -5,6 +5,7 @@ import * as categories from './categories/schemas.js'
 import * as tutorials from './tutorials/schemas.js'
 import * as events from './events/schemas.js'
 import * as announcements from './announcements/schemas.js'
+import * as groups from './groups/schemas.js'
 
 function definition(key, plural, label, schemas, title, gender, empty, select) {
   const feminine = gender === 'f'
@@ -37,8 +38,14 @@ export const resourceDefinitions = {
       registration: true, status: true, agenda: true, documents: true, schoolId: true, school: true, ...timestamps }),
   announcements: definition('announcement', 'announcements', 'aviso', announcements, 'Aviso', 'm', 'Não foi encontrado nenhum aviso!',
     { id: true, title: true, message: true, authorId: true, ...timestamps }),
+  groups: {
+    ...definition('group', 'groups', 'equipe', groups, 'Equipe', 'f', 'Não foi encontrada nenhuma equipe!',
+      { id: true, name: true, students: true, grade: true, schoolId: true, school: true, ...timestamps }),
+    model: 'roboticsGroup',
+  },
 }
 Object.assign(resourceDefinitions.announcements.messages, { list: 'Avisos encontrados com sucesso!' })
+Object.assign(resourceDefinitions.groups.messages, { list: 'Equipes encontradas com sucesso!' })
 Object.assign(resourceDefinitions.users.messages, { list: 'Usuários encontrados com sucesso!' })
 Object.assign(resourceDefinitions.schools.messages, { list: 'Escolas encontradas com sucesso!' })
 Object.assign(resourceDefinitions.projects.messages, { list: 'Projetos encontrados com sucesso!' })

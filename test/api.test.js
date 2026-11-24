@@ -485,3 +485,79 @@ test('TokenService uses SameSite=None and Secure for refresh cookie in productio
   assert.match(response.headers['set-cookie'], /Secure/)
   assert.match(response.headers['set-cookie'], /HttpOnly/)
 })
+
+test('robotics groups (/groups) CRUD, school-scoped teacher permissions and long descriptions', async t => {
+  const { request, register, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const schoolA = (await request('POST', '/schools', { name: 'EMEF A' }, admin)).body.school
+  const schoolB = (await request('POST', '/schools', { name: 'EMEF B' }, admin)).body.school
+
+  assert.equal((await request('GET', '/groups')).status, 401)
+  assert.equal((await request('GET', '/groups', undefined, admin)).status, 404)
+
+  const groupA = await request('POST', '/groups', {
+    name: 'BioBot Alpha',
+    students: 'Ana Laura, João Lattaro, Sthefany Santiago',
+    grade: '8º Ano',
+    schoolId: schoolA.id,
+  }, admin)
+  assert.equal(groupA.status, 201)
+  assert.equal(groupA.body.group.name, 'BioBot Alpha')
+  assert.equal(groupA.body.group.students, 'Ana Laura, João Lattaro, Sthefany Santiago')
+  assert.equal(groupA.body.group.grade, '8º Ano')
+  assert.equal(groupA.body.group.school.name, 'EMEF A')
+
+  const groupB = (await request('POST', '/groups', {
+    name: 'BioBot Beta',
+    students: 'Lucas Perrotta',
+    grade: '9º Ano',
+    schoolId: schoolB.id,
+  }, admin)).body.group
+
+  const registered = await register({ email: 'prof@school.example' })
+  const onboarded = await request('POST', '/auth/onboarding', { schoolId: schoolA.id }, bearer(registered.body.accessToken))
+  const teacher = bearer(onboarded.body.accessToken)
+
+  const teacherCreated = await request('POST', '/groups', {
+    name: 'BioBot Gamma',
+    students: 'Maria Clara',
+    grade: '7º Ano',
+  }, teacher)
+  assert.equal(teacherCreated.status, 201)
+  assert.equal(teacherCreated.body.group.schoolId, schoolA.id)
+
+  const teacherList = await request('GET', '/groups', undefined, teacher)
+  assert.equal(teacherList.status, 200)
+  assert.deepEqual(teacherList.body.groups.map((g) => g.schoolId), [schoolA.id, schoolA.id])
+
+  assert.equal((await request('GET', `/groups/${groupA.body.group.id}`, undefined, teacher)).status, 200)
+  assert.equal((await request('PUT', `/groups/${groupA.body.group.id}`, { grade: '9º Ano' }, teacher)).status, 200)
+  assert.equal((await request('POST', '/groups', { name: 'Invasor', schoolId: schoolB.id }, teacher)).status, 403)
+  assert.equal((await request('GET', `/groups/${groupB.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('PUT', `/groups/${groupB.id}`, { name: 'Hack' }, teacher)).status, 403)
+  assert.equal((await request('PUT', `/groups/${groupA.body.group.id}`, { schoolId: schoolB.id }, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/groups/${groupB.id}`, undefined, teacher)).status, 403)
+  assert.equal((await request('DELETE', `/groups/${teacherCreated.body.group.id}`, undefined, teacher)).status, 200)
+  assert.equal((await request('DELETE', `/groups/${groupB.id}`, undefined, admin)).status, 200)
+
+  const longDescription = 'Robótica educacional com materiais sustentáveis e programação em blocos. '.repeat(12).trim()
+  const category = (await request('POST', '/categories', { name: 'Sustentabilidade' }, admin)).body.category
+  const project = await request('POST', '/projects', {
+    name: 'Projeto Texto Longo',
+    description: longDescription,
+    schoolId: schoolA.id,
+  }, teacher)
+  assert.equal(project.status, 201)
+  assert.equal(project.body.project.description, longDescription)
+
+  const tutorial = await request('POST', '/tutorials', {
+    title: 'Tutorial Texto Longo',
+    description: longDescription,
+    categoryId: category.id,
+    difficulty: 'MEDIUM',
+    schoolId: schoolA.id,
+    materialsNeeded: ['Placa', 'Sensores'],
+  }, teacher)
+  assert.equal(tutorial.status, 201)
+  assert.equal(tutorial.body.tutorial.description, longDescription)
+})

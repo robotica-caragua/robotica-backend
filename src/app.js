@@ -88,6 +88,9 @@ export async function buildApp({ db, config, overrides, logger = false }) {
   registerCrudRoutes(app, '/announcements', container.controllers.announcements, session, [
     container.policy.role('ADMIN'),
   ])
+  registerCrudRoutes(app, '/groups', container.controllers.groups, session, [
+    container.policy.role('ADMIN', 'TEACHER'),
+  ])
   app.addHook('onClose', async () => {
     await db.$disconnect?.()
   })
