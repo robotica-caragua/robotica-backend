@@ -32,11 +32,13 @@ class SchoolRepository extends PrismaRepository {
     this.db = db
   }
   async delete(id) {
-    await this.db.user.updateMany({ where: { schoolId: id }, data: { schoolId: null } })
-    await this.db.event?.updateMany?.({ where: { schoolId: id }, data: { schoolId: null } })
-    await this.db.project.deleteMany({ where: { schoolId: id } })
-    await this.db.tutorial.deleteMany({ where: { schoolId: id } })
-    return super.delete(id)
+    return this.db.$transaction(async (tx) => {
+      await tx.user.updateMany({ where: { schoolId: id }, data: { schoolId: null } })
+      await tx.event?.updateMany?.({ where: { schoolId: id }, data: { schoolId: null } })
+      await tx.project.deleteMany({ where: { schoolId: id } })
+      await tx.tutorial.deleteMany({ where: { schoolId: id } })
+      return tx.school.delete({ where: { id }, select: this.select })
+    })
   }
 }
 

@@ -24,7 +24,6 @@ async function findOrCreateSchool(data) {
 try {
   await db.$connect()
 
-  // As 4 escolas oficiais da rede municipal de Caraguatatuba
   const escolasOficiais = [
     {
       name: "EMEF Profª Maria Aparecida De Carvalho",
@@ -52,16 +51,10 @@ try {
 
   const school = escolasCriadas[0]
 
-  // Limpa tutoriais e projetos para manter banco limpo
-  await db.tutorial.deleteMany({})
-  await db.project.deleteMany({})
-
-  // Remove usuário demo
   await db.user.deleteMany({
     where: { email: { in: ["demo@robotica.local", "demo@gmail.com"] } }
   })
 
-  // Usuário Administrador
   const passwordAdmin = await passwords.hash("Admin123@")
   const admin = await db.user.upsert({
     where: { email: "admin@gmail.com" },
@@ -84,7 +77,6 @@ try {
     },
   })
 
-  // Usuário Professor Robson
   const passwordRobson = await passwords.hash("Robson123@")
   const robson = await db.user.upsert({
     where: { email: "robson@gmail.com" },

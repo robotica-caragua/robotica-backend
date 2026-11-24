@@ -13,7 +13,6 @@ export class MemoryDatabase {
         const ids = [...new Set([...(row.schoolIds || []), ...(row.schoolId ? [row.schoolId] : [])])]
         return ids.map(id => structuredClone(this.tables.school.find(school => school.id === id))).filter(Boolean)
       }
-      // Emula as escritas da relação N:N (connect/set) como uma lista de ids na própria linha.
       const applyRelations = (row, data) => {
         const { schools, ...rest } = data
         if (schools?.set) row.schoolIds = schools.set.map(item => item.id)
@@ -61,6 +60,12 @@ export class MemoryDatabase {
           const index = rows.findIndex(row => matches(row, where))
           if (index < 0) throw Object.assign(new Error('missing'), { code: 'P2025' })
           return project(rows.splice(index, 1)[0], options)
+        },
+        deleteMany: async ({ where } = {}) => {
+          const kept = rows.filter(row => !matches(row, where))
+          const count = rows.length - kept.length
+          rows.splice(0, rows.length, ...kept)
+          return { count }
         },
       }
     }

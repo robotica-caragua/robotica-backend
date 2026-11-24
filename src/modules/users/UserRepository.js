@@ -2,15 +2,11 @@ import { PrismaRepository } from '../../core/database/PrismaRepository.js'
 
 export const publicUserSelect = { id: true, name: true, email: true, matricula: true, role: true, schoolId: true, schools: true, createdAt: true, updatedAt: true }
 
-// Escolas vinculadas (N:N) sempre acompanham o usuário retornado pela API.
 export const userSchoolsInclude = { schools: { select: { id: true, name: true, address: true }, orderBy: { id: 'asc' } } }
 
 export class UserRepository extends PrismaRepository {
   constructor(db) { super(db.user); this.db = db }
 
-  // Converte schoolIds/schoolId em escrita da relação N:N. `schoolId` continua sendo a escola principal.
-  // - schoolIds informado: substitui todos os vínculos (set) e a principal passa a ser a primeira.
-  // - apenas schoolId (cadastro/onboarding legados): adiciona o vínculo sem remover os existentes.
   prepare(data, creating) {
     const { schoolIds, ...rest } = data
     delete rest.perfil

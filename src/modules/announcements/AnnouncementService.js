@@ -1,6 +1,5 @@
 import { CrudService } from '../../core/http/CrudService.js'
 
-// Avisos da administração: lista vazia não é erro e o autor é registrado na criação.
 export class AnnouncementService extends CrudService {
   async list() {
     const records = await this.repository.findAll()
