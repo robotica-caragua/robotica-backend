@@ -47,7 +47,18 @@ export class UserRepository extends PrismaRepository {
   async findById(id) { return this.hydrateSchools(await this.model.findUnique({ where: { id }, include: userSchoolsInclude })) }
   async create(data) { return this.hydrateSchools(await this.model.create({ data: this.prepare(data, true), include: userSchoolsInclude })) }
   async update(id, data) { return this.hydrateSchools(await this.model.update({ where: { id }, data: this.prepare(data, false), include: userSchoolsInclude })) }
-  async delete(id) { return this.hydrateSchools(await this.model.delete({ where: { id }, include: userSchoolsInclude })) }
+  async delete(id) {
+    const existing = await this.findById(id)
+    if (existing) {
+      await this.db.announcement?.updateMany?.({ where: { authorId: id }, data: { authorId: null } })
+      await this.model.update({
+        where: { id },
+        data: { schoolId: null, roboticsGroupId: null, schools: { set: [] } }
+      })
+    }
+    const deleted = await this.model.delete({ where: { id }, include: userSchoolsInclude })
+    return existing ? { ...deleted, schools: existing.schools } : this.hydrateSchools(deleted)
+  }
   async findByEmail(email) { return this.hydrateSchools(await this.model.findUnique({ where: { email }, include: userSchoolsInclude })) }
   async findByGoogleId(googleId) { return this.hydrateSchools(await this.model.findUnique({ where: { googleId }, include: userSchoolsInclude })) }
   findSchool(id) { return this.model.findUnique({ where: { id }, select: { schoolId: true, school: true, schools: { select: { id: true, name: true, address: true }, orderBy: { id: 'asc' } } } }) }
