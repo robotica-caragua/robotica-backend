@@ -97,7 +97,7 @@ model PasswordResetToken {
 model Project {
   id          Int      @id @default(autoincrement())
   name        String
-  description String? @db.VarChar(1000)
+  description String   @db.VarChar(1000)
   schoolId    Int
   school      School   @relation(fields: [schoolId], references: [id])
   createdAt   DateTime @default(now())
