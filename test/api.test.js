@@ -230,6 +230,10 @@ test('teachers can be linked to several schools and see them in /auth/me and sco
   assert.deepEqual((await request('GET', '/auth/me', undefined, teacher)).body.user.schools.map(s => s.id), [a.id, b.id])
   assert.equal((await request('POST', '/projects', { name: 'P', schoolId: b.id }, teacher)).status, 201)
   assert.equal((await request('POST', '/projects', { name: 'P', schoolId: c.id }, teacher)).status, 403)
+  const selfLink = await request('PUT', `/users/${login.body.user.id}`, { name: 'Professor', schoolIds: [c.id] }, teacher)
+  assert.equal(selfLink.status, 200)
+  assert.deepEqual(selfLink.body.user.schools.map(s => s.id), [a.id, b.id])
+  assert.equal((await request('POST', '/projects', { name: 'P', schoolId: c.id }, teacher)).status, 403)
 })
 test('announcements: admin writes, any authenticated user reads', async t => {
   const { request, register, createAdmin } = await fixture(t)
@@ -571,4 +575,37 @@ test('robotics groups (/groups) CRUD, school-scoped teacher permissions and long
   }, teacher)
   assert.equal(tutorial.status, 201)
   assert.equal(tutorial.body.tutorial.description, longDescription)
+})
+
+test('events reject unsafe document URLs and accept http(s) or PDF data URLs', async t => {
+  const { request, createAdmin } = await fixture(t)
+  const admin = bearer((await createAdmin()).body.accessToken)
+  const base = { title: 'Feira', date: '2026-12-01', location: 'Ginásio' }
+
+  const rejected = await request('POST', '/events', {
+    ...base,
+    documents: [{ nome: 'regulamento', url: 'javascript:alert(1)' }]
+  }, admin)
+  assert.equal(rejected.status, 400)
+
+  const dataUrlRejected = await request('POST', '/events', {
+    ...base,
+    documents: [{ nome: 'malicioso', url: 'data:text/html,<script>alert(1)</script>' }]
+  }, admin)
+  assert.equal(dataUrlRejected.status, 400)
+
+  const accepted = await request('POST', '/events', {
+    ...base,
+    documents: [
+      { nome: 'site', url: 'https://example.com/regulamento' },
+      { nome: 'pdf', url: 'data:application/pdf;base64,JVBERi0xLjQK' }
+    ]
+  }, admin)
+  assert.equal(accepted.status, 201)
+  assert.deepEqual(accepted.body.event.documents.map((d) => d.nome), ['site', 'pdf'])
+
+  const updateRejected = await request('PUT', `/events/${accepted.body.event.id}`, {
+    documents: [{ nome: 'troca', url: 'javascript:alert(2)' }]
+  }, admin)
+  assert.equal(updateRejected.status, 400)
 })

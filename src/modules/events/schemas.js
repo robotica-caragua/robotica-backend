@@ -2,6 +2,20 @@ import { z } from 'zod'
 
 const requiredString = (message) => z.string().trim().min(1, message)
 
+const urlDeDocumentoValida = (value) => {
+  if (!value) return true
+  const compacta = value.replace(/[\s\u0000-\u001f]/g, '')
+  const scheme = compacta.match(/^([a-z][a-z0-9+.-]*):/i)?.[1]?.toLowerCase()
+  if (!scheme || scheme === 'http' || scheme === 'https') return true
+  return scheme === 'data' && /^data:application\/pdf[;,]/i.test(compacta)
+}
+
+const documentUrl = z
+  .string()
+  .trim()
+  .optional()
+  .refine(urlDeDocumentoValida, 'URL de documento inválida.')
+
 export const createEventSchema = z.object({
   title: requiredString('O campo title é obrigatório.'),
   type: z.string().trim().optional().default('torneio'),
@@ -24,7 +38,7 @@ export const createEventSchema = z.object({
     .array(
       z.object({
         nome: z.string().trim(),
-        url: z.string().trim().optional(),
+        url: documentUrl,
         tamanho: z.string().trim().optional()
       })
     )

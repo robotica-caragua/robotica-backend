@@ -10,6 +10,8 @@ export class UserController extends CrudController {
       delete parsed.role
       delete parsed.perfil
       delete parsed.permissaoAdministrador
+      delete parsed.schoolId
+      delete parsed.schoolIds
     }
     const record = await this.service.update(id, parsed)
     return { message: this.definition.messages.update, [this.definition.key]: record }
