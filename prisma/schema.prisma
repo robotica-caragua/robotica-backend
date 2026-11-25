@@ -104,7 +104,7 @@ model RoboticsGroup {
 model Project {
   id          Int      @id @default(autoincrement())
   name        String
-  description String?  @db.Text
+  description String   @db.VarChar(1000)
   schoolId    Int
   school      School   @relation(fields: [schoolId], references: [id])
   imageUrl    String?  @db.VarChar(2048)
@@ -116,7 +116,7 @@ model Project {
 model Tutorial {
   id              Int        @id @default(autoincrement())
   title           String
-  description     String     @db.Text
+  description     String     @db.VarChar(1000)
   categoryId      Int
   category        Category   @relation(fields: [categoryId], references: [id])
   difficulty      Difficulty

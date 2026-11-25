@@ -43,7 +43,8 @@ export class ProjectService extends CrudService {
   async createAs(actor, data) {
     this.assertSameSchool(await this.scopeOf(actor), data.schoolId)
     const payload = this.uploads ? await this.uploads.normalizeMediaFields(data) : data
-    return this.create(payload)
+    // A coluna description e NOT NULL; sem descricao informada, grava vazio em vez de falhar (500).
+    return this.create({ ...payload, description: payload.description ?? '' })
   }
 
   async updateAs(actor, id, data) {

@@ -3,7 +3,7 @@ const requiredString = (message) => z.string().trim().min(1, message)
 
 export const createTutorialSchema = z.object({
   title: requiredString('O campo `title` é obrigatório.'),
-  description: z.string(),
+  description: z.string().max(1000, 'A descrição deve ter no máximo 1000 caracteres.'),
 
   categoryId: z.number().int().positive('O campo `category` é obrigatório.'),
 
