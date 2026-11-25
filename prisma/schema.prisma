@@ -97,7 +97,7 @@ model PasswordResetToken {
 model Project {
   id          Int      @id @default(autoincrement())
   name        String
-  description String?
+  description String? @db.Text
   schoolId    Int
   school      School   @relation(fields: [schoolId], references: [id])
   createdAt   DateTime @default(now())
@@ -107,7 +107,7 @@ model Project {
 model Tutorial {
   id              Int        @id @default(autoincrement())
   title           String
-  description     String
+  description     String     @db.Text
   categoryId      Int
   category        Category   @relation(fields: [categoryId], references: [id])
   difficulty      Difficulty
