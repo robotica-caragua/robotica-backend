@@ -3,7 +3,7 @@ const requiredString = (message) => z.string().trim().min(1, message)
 
 export const createProjectSchema = z.object({
   name: requiredString('O campo name é obrigatório.'),
-  description: z.string().trim().max(1000, 'A descri��o deve ter no m�ximo 1000 caracteres.').optional(),
+  description: z.string().trim().max(1000, 'A descrição deve ter no máximo 1000 caracteres.').optional(),
   schoolId: z.number().int().positive('O campo schoolId deve ser um número inteiro positivo.'),
 })
 
