@@ -1,4 +1,5 @@
 import { AppError } from '../../core/errors/AppError.js'
+import { userSchoolsInclude } from '../users/UserRepository.js'
 
 export class AuthRepository {
   constructor(db) { this.db = db }
@@ -7,7 +8,7 @@ export class AuthRepository {
   }
   findSession(refreshTokenHash) {
     return this.db.authSession.findFirst({
-      where: { refreshTokenHash, revokedAt: null, expiresAt: { gt: new Date() } }, include: { user: true },
+      where: { refreshTokenHash, revokedAt: null, expiresAt: { gt: new Date() } }, include: { user: { include: userSchoolsInclude } },
     })
   }
   async rotateSession(id, previousHash, refreshTokenHash, expiresAt) {

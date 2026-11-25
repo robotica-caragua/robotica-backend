@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { AuthService } from '../src/modules/auth/AuthService.js'
 import { AuthenticationStrategy } from '../src/modules/auth/strategies/AuthenticationStrategy.js'
 import { GoogleAuthenticationStrategy } from '../src/modules/auth/strategies/GoogleAuthenticationStrategy.js'
+import { CloudinaryStorageStrategy } from '../src/modules/uploads/strategies/CloudinaryStorageStrategy.js'
 import { buildApp } from '../src/app.js'
 import { MemoryDatabase } from './helpers/MemoryDatabase.js'
 
@@ -60,4 +61,39 @@ test('authentication rate limit rejects excessive attempts', async t => {
   }
   const limited = await app.inject({ method: 'POST', url: '/auth/login', payload: { email: 'missing@example.com', password: 'wrong' } })
   assert.equal(limited.statusCode, 429)
+})
+
+test('CloudinaryStorageStrategy signs upload requests and handles errors', async () => {
+  const missing = new CloudinaryStorageStrategy({})
+  await assert.rejects(missing.upload({ dataUrl: 'data:image/png;base64,iVBORw0KGgo=' }), { statusCode: 503 })
+
+  let capturedUrl = null
+  let capturedBody = null
+  const cloudinaryConfig = {
+    CLOUDINARY_CLOUD_NAME: 'demo-cloud',
+    CLOUDINARY_API_KEY: '123456',
+    CLOUDINARY_API_SECRET: 'secret-key',
+    CLOUDINARY_FOLDER: 'robotica',
+  }
+  const strategy = new CloudinaryStorageStrategy(cloudinaryConfig, async (url, options) => {
+    capturedUrl = url
+    capturedBody = options.body
+    return {
+      ok: true,
+      json: async () => ({ secure_url: 'https://res.cloudinary.com/demo-cloud/image/upload/v1/robotica/sample.png' }),
+    }
+  })
+
+  const url = await strategy.upload({ dataUrl: 'data:image/png;base64,iVBORw0KGgo=' })
+  assert.equal(url, 'https://res.cloudinary.com/demo-cloud/image/upload/v1/robotica/sample.png')
+  assert.equal(capturedUrl, 'https://api.cloudinary.com/v1_1/demo-cloud/image/upload')
+  assert.equal(capturedBody.get('api_key'), '123456')
+  assert.equal(capturedBody.get('folder'), 'robotica')
+  assert.match(capturedBody.get('signature'), /^[a-f0-9]{40}$/)
+
+  const failing = new CloudinaryStorageStrategy(cloudinaryConfig, async () => ({
+    ok: false,
+    json: async () => ({ error: { message: 'invalid' } }),
+  }))
+  await assert.rejects(failing.upload({ dataUrl: 'data:image/png;base64,iVBORw0KGgo=' }), { statusCode: 502 })
 })
